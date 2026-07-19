@@ -8,7 +8,7 @@ If you are Claude Code picking this project up: this doc is the source of truth.
 
 **Pic A Boo** — a two-person online photobooth web app. Two people, in real time, each take 6 selfies. The twist that IS the product: **you don't pick your own photos. Your partner picks which 2 of you appear; you pick which 2 of them appear. Nobody sees themselves until the final "BOO" reveal.** Output is a vertical photobooth strip (4 photos, alternating you/boo) sized for Instagram Stories (9:16).
 
-The whole app is a single file: **`index.html`** (named `index.html` so it deploys straight to a site root, e.g. on Netlify; ~1265 lines, HTML + CSS + JS in one). It works. It has been tested on two real devices and the core loop runs.
+The whole app is a single file: **`index.html`** (named `index.html` so it deploys straight to a site root, e.g. on Netlify; ~1340 lines, HTML + CSS + JS in one). It works. It has been tested on two real devices and the core loop runs.
 
 ---
 
@@ -88,20 +88,23 @@ Ask Claude Code to explain any of this if stuck.
 
 **Features present:** rematch, full gallery (click the polaroid wall on start screen), timer taunt on picking, reaction burst, MP4 video export.
 
-**Custom frame system:** drop a 1080×1920 PNG named `frame-1.png`..`frame-12.png` into `assets/frames/` with transparent photo windows → it auto-appears as a selectable frame. Window coords and a layout guide are in `assets/frames/`. Windows: x173, w734, h413, at y150/575/1000/1425.
+**Custom frame system:** drop a 1080×1920 PNG named `frame-1.png`..`frame-12.png` into `assets/frames/` with transparent photo windows → it auto-appears as a selectable frame (shown as a mini strip thumbnail in the picker). Windows: x173, w734, h413, at y150/575/1000/1425. `frame-1.png` is a straight navy/cyan/pink photostrip in the app's own identity, pixel-verified against those exact rects. The code has a `FRAME_WINDOWS` override map for frames whose cutouts don't match the standard windows (tilted/scattered layouts); it is currently empty because frame-1 is straight.
+
+**Sharing:** on phones the Photo and Video buttons open the OS share sheet (Web Share API) so the strip can go straight to Instagram Stories or a chat; on desktop they download as before.
 
 ---
 
 ## FILES
 
-- **`index.html`** — THE APP. This is the only file that matters. Everything else is history.
-- `app-snapshot-bak.html` — backup from before WebRTC was added. Proven-working snapshot-only version. Fall back to this if WebRTC breaks everything.
+- **`index.html`** — THE APP. Single file, the only one that matters. (It was called `app.html` earlier; renamed so it deploys straight to a site root.)
 - `assets/logo.png` — the Pic A Boo wordmark (transparent bg).
-- `assets/frames/` — custom frame system: `_layout-guide.png`, `README.md`.
-- `start.html`, `lobby.html`, `shooting.html`, `picking.html`, `reveal.html`, `frame-none.html`, `frames.html`, `mockup.html` — standalone design prototypes. Superseded by the live app. Keep for reference, don't edit.
-- `index2.html`, `index3.html` — old pre-redesign versions (glitch aesthetic, old mechanic). `index3.html` was the backend source the app was built from. Historical only. (Note: an even older `index.html` used to hold this same name before the live app file was renamed to `index.html` for Netlify — if you find a stray old glitch-era `index.html` alongside this one, that's the legacy file, not the app.)
-- `GEMINI-FRAME-PROMPT.md` — prompt for generating a blue-glitch frame in Gemini (user wanted this; hadn't finished it).
-- `TEST-CHECKLIST.md` — deploy + two-device test steps.
+- `assets/frames/frame-1.png` — the straight navy/cyan/pink photostrip frame (see frame system above).
+- `HANDOFF.md` — this doc.
+- `.gitignore` — keeps `.claude/` and OS junk out of git.
+
+That's everything. The historical prototypes this doc used to list (`app-snapshot-bak.html`, `start.html`, `index2.html`, `index3.html`, `GEMINI-FRAME-PROMPT.md`, `TEST-CHECKLIST.md`, the frames `_layout-guide.png`/`README.md`, etc.) were deleted before the project went to git. If some doc or comment references them, they're gone on purpose.
+
+**Git:** the project lives at `https://github.com/Figlioprimo/Pic-a-boo` (private, branch `main`). Push only when the user asks.
 
 ---
 

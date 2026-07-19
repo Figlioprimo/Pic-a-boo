@@ -2,8 +2,19 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Pic A Boo</title>
+<meta name="description" content="Two-person photobooth. Your boo picks your photos. You pick theirs. Nobody sees themselves until the reveal. Be kind. Or don't.">
+<meta name="theme-color" content="#24406B">
+<link rel="icon" type="image/png" href="assets/logo.png">
+<link rel="apple-touch-icon" href="assets/logo.png">
+<meta property="og:title" content="Pic A Boo">
+<meta property="og:description" content="Two-person photobooth. Your boo picks your photos. You pick theirs. Nobody sees themselves until the reveal.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="assets/logo.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Pic A Boo">
+<meta name="twitter:description" content="Two-person photobooth. Your boo picks your photos. You pick theirs. Nobody sees themselves until the reveal.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -179,6 +190,10 @@
   .opts{display:flex;gap:7px;flex-wrap:wrap}
   .chip{font-weight:600;font-size:12px;padding:8px 14px;border-radius:999px;cursor:pointer;background:rgba(0,0,0,.2);border:1.5px solid rgba(255,255,255,.16);color:var(--cream)}
   .chip.on{background:var(--cyan);border-color:var(--cyan);color:#06323C}
+  .framechip{width:54px;aspect-ratio:9/16;padding:0;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.35);border:1.5px solid rgba(79,227,255,.45);display:inline-flex;align-items:center;justify-content:center;vertical-align:top}
+  .framechip img{width:100%;height:100%;object-fit:cover;display:block}
+  .framechip .nofr{font-family:var(--poster);font-size:16px;color:var(--cream-dim)}
+  .framechip.on{background:rgba(0,0,0,.35);border-color:var(--pink);box-shadow:0 0 0 2px var(--pink),0 0 12px rgba(226,74,155,.55);color:var(--cream)}
   .p-go{font-size:clamp(24px,3vw,40px);margin-top:8px}
   .p-note{font-size:13px;color:var(--cream-dim);margin-top:6px;min-height:18px}
 
@@ -235,7 +250,7 @@
     <div class="header"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
     <div class="l-body">
       <div class="kicker">Enter your boo's code</div>
-      <input id="joinCode" maxlength="4" autocomplete="off" placeholder="CODE"
+      <input id="joinCode" maxlength="4" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="CODE"
         style="margin:18px 0;width:min(320px,80%);text-align:center;text-transform:uppercase;font-family:var(--poster);font-size:44px;letter-spacing:.3em;background:rgba(0,0,0,.22);border:2px solid var(--cyan);border-radius:12px;color:var(--cyan);padding:12px">
       <button class="txtbtn" id="btnJoin" style="font-size:34px">Join</button>
       <button class="l-leave" data-home>Back</button>
@@ -659,7 +674,7 @@ async function connect(code){
         $('shSmile').textContent='you asked for it.';
       }
     })
-    .on('broadcast',{event:'grid'}, ({payload})=>{ built=payload.path; $('btnDl').hidden=false; $('btnVid').hidden=false; $('btnVid').hidden=false; paintRevealStatus(); });
+    .on('broadcast',{event:'grid'}, ({payload})=>{ built=payload.path; $('btnDl').hidden=false; $('btnVid').hidden=false; paintRevealStatus(); });
   await new Promise((res,rej)=>{
     channel.subscribe(async s=>{
       if(s==='SUBSCRIBED'){ await channel.track({host:isHost}); res(); }
@@ -784,7 +799,7 @@ async function sendShotThumb(blob, i){
 async function store(blob,i){
   const path=`${session.id}/${me}_${i}.jpg`;
   const up=await sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg',upsert:true});
-  if (up.error) return console.error(up.error);
+  if (up.error){ console.error(up.error); fail(`Shot ${i+1} did not upload. It will be missing from the pick.`); return; }
   await sb.from('photos').insert({ session_id:session.id, device_id:me, device_label:isHost?'host':'guest', shot_index:i, path });
 }
 
@@ -798,6 +813,8 @@ function onPartnerShotLanded(i,url){
 
 /* ================= REVIEW / PICK ================= */
 async function openReview(){
+  // fired automatically after shooting; give the wait a face while photos fetch
+  $('shNum').textContent='Developing…'; $('shSmile').textContent='no peeking.';
   const { data,error } = await sb.from('photos').select().eq('session_id',session.id).order('created_at');
   if (error) return fail('Could not load the photos.');
   pool = data.map(p=>({ ...p, url: sb.storage.from('photos').getPublicUrl(p.path).data.publicUrl }));
@@ -813,8 +830,8 @@ async function openReview(){
     channel.send({type:'broadcast',event:'filter',payload:{from:me,id:c.dataset.id}});
   }));
 
-  // build frame chips (discovered from assets/frames/)
-  $('frameChips').innerHTML = FRAMES.map((f,i)=>`<span class="chip ${f.id===chosenFrame?'on':''}" data-id="${f.id}">${f.label}</span>`).join('');
+  // build frame chips (discovered from assets/frames/) as mini strip previews
+  $('frameChips').innerHTML = FRAMES.map(f=>`<span class="chip framechip ${f.id===chosenFrame?'on':''}" data-id="${f.id}" title="${f.label}">${f.src?`<img src="${f.src}" alt="${f.label}">`:`<span class="nofr">◹◸</span>`}</span>`).join('');
   $('frameChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
     $('frameChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
     c.classList.add('on'); chosenFrame=c.dataset.id;
@@ -1027,6 +1044,7 @@ function paintReveal(){
 
 async function buildStrip(){
   try{
+    $('revStatus').textContent='Developing the strip…';
     const ids=stripIds();
     const c=document.createElement('canvas'); c.width=OUT_W; c.height=OUT_H;
     const x=c.getContext('2d');
@@ -1067,14 +1085,28 @@ async function buildStrip(){
 
 function load(src){ return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('load failed')); im.src=src; }); }
 
-async function download(){
-  if (!built) return;
-  const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl;
-  const blob=await (await fetch(url)).blob();
-  const name=`pic-a-boo-${session.code}.jpg`;
+// phones get the OS share sheet (straight to Stories etc.); everyone else gets a download
+async function saveOrShare(blob,name,mime){
+  const file=new File([blob],name,{type:mime});
+  if (navigator.canShare && navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file]}); return; }
+    catch(e){ if (e && e.name==='AbortError') return; } // user closed the sheet; not an error
+  }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
   URL.revokeObjectURL(a.href);
-  await keep(blob,name);
+}
+
+async function download(){
+  if (!built) return;
+  const btn=$('btnDl'); btn.disabled=true; const was=btn.textContent; btn.textContent='Fetching...';
+  try{
+    const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl;
+    const blob=await (await fetch(url)).blob();
+    const name=`pic-a-boo-${session.code}.jpg`;
+    await saveOrShare(blob,name,'image/jpeg');
+    await keep(blob,name);
+  }catch(e){ fail('Could not save the photo. '+(e.message||e)); }
+  finally{ btn.textContent=was; btn.disabled=false; }
 }
 
 
@@ -1234,13 +1266,9 @@ async function makeVideo(){
 
     const blob=new Blob(chunks,{type:type.mime});
     c.width=c.height=0;
-    const a=document.createElement('a');
-    a.href=URL.createObjectURL(blob);
-    a.download=`pic-a-boo-${session.code}.${type.ext}`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    await saveOrShare(blob,`pic-a-boo-${session.code}.${type.ext}`,type.mime);
     if (type.ext!=='mp4') fail("Saved as .webm (your browser can't record mp4). Plays on phones and uploads to most apps.");
-  }catch(e){ fail('Video failed. '+(e.message||e)+' — use Photo instead.'); }
+  }catch(e){ fail('Video failed. '+(e.message||e)+'. Use Photo instead.'); }
   finally{ $('btnVid').textContent='Video'; $('btnVid').disabled=false; }
 }
 
