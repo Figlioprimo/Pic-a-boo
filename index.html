@@ -1,0 +1,1308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pic A Boo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#24406B; --navy-dk:#1B3358;
+    --cream:#EFE9DD; --cream-dim:#B9B4A8; --paper:#F2EDE2;
+    --pink:#E24A9B; --pink-lt:#F06FB4; --cyan:#4FE3FF;
+    --poster:'Anton','Arial Narrow',sans-serif;
+    --body:'Plus Jakarta Sans',system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden}
+  body{background:var(--navy);color:var(--cream);font-family:var(--body);height:100vh;height:100dvh;height:calc(var(--vh,1vh)*100);-webkit-font-smoothing:antialiased}
+
+  .screen{height:100vh;height:100dvh;height:calc(var(--vh,1vh)*100);display:none}
+  .screen.on{display:flex}
+
+  /* shared navy stage */
+  .stage{
+    position:relative;flex:1;margin:16px;border-radius:6px;overflow:hidden;min-height:0;
+    background:radial-gradient(120% 90% at 50% 20%, #2B4C7E 0%, var(--navy) 55%, var(--navy-dk) 100%);
+    display:flex;flex-direction:column;padding:clamp(20px,3vw,44px);
+  }
+  .stage.dark{background:#0B1526}
+  .stage::before{
+    content:"";position:absolute;inset:0;pointer-events:none;z-index:1;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.9'/></svg>");
+    background-size:180px 180px;mix-blend-mode:screen;opacity:.16;animation:static .5s steps(4) infinite;
+  }
+  .stage.dark::before{opacity:.10}
+  @keyframes static{0%{background-position:0 0}25%{background-position:-40px 20px}50%{background-position:30px -30px}75%{background-position:-20px -10px}100%{background-position:20px 30px}}
+  .stage > *{position:relative;z-index:2}
+
+  /* header logo */
+  .header{display:flex;align-items:center;margin-bottom:14px}
+  .header img{width:130px;height:auto;cursor:pointer;filter:drop-shadow(0 3px 8px rgba(0,0,0,.3))}
+
+  /* text buttons */
+  .txtbtn{font-family:var(--poster);letter-spacing:.02em;text-transform:uppercase;background:none;border:none;cursor:pointer;color:var(--cream);transition:color .12s,transform .12s}
+  .txtbtn:hover:not(:disabled){color:var(--pink);transform:translateX(6px)}
+  .txtbtn:hover:not(:disabled)::before{content:"▸ ";color:var(--cyan)}
+  .txtbtn:disabled{color:#3E5B85;cursor:not-allowed}
+  .txtbtn:active:not(:disabled){transform:scale(.96)}
+  #tvflick{position:fixed;inset:0;z-index:97;pointer-events:none;opacity:0;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='f'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23f)' opacity='0.9'/></svg>");background-size:190px 190px}
+  #tvflick.run{animation:flick .24s steps(3)}
+  @keyframes flick{0%{opacity:.55}100%{opacity:0}}
+
+  .err{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;background:#7A1233;color:#fff;font-family:var(--body);font-size:13px;padding:12px 20px;border-radius:8px;max-width:90%;text-align:center;display:none}
+  .err.on{display:block}
+
+  /* ============ START ============ */
+  #start .stage{flex-direction:row;gap:clamp(20px,3vw,48px)}
+  .s-left{flex:1 1 58%;display:flex;flex-direction:column;min-width:0}
+  .s-logo{width:min(94%,560px);margin:clamp(6px,2vh,26px) 0 auto;filter:drop-shadow(0 6px 18px rgba(0,0,0,.28))}
+  .s-menu{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin:auto 0}
+  .s-menu button{font-size:clamp(34px,5.4vw,74px);line-height:1;color:var(--cream)}
+  .s-tag{font-weight:500;font-size:clamp(13px,1.3vw,16px);color:var(--cream-dim);margin-top:18px;max-width:520px;line-height:1.5}
+  .s-foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:30px}
+  .s-foot span{font-family:var(--poster);font-size:clamp(20px,2.4vw,30px);color:var(--pink);letter-spacing:.03em}
+  .s-right{flex:1 1 42%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .polaroid{background:var(--cream);padding:8px 8px 20px;border-radius:2px;box-shadow:0 12px 26px rgba(0,0,0,.35);width:min(64%,280px);margin-top:-26px;transition:transform .18s}
+  .polaroid:first-child{margin-top:0}
+  .polaroid:hover{transform:rotate(0)!important;scale:1.04;z-index:5}
+  .polaroid img{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:#0d1b30}
+  .polaroid .empty{width:100%;aspect-ratio:9/16;background:#dcd6c8;display:flex;align-items:center;justify-content:center;color:#b0a894;font-family:var(--poster);font-size:22px}
+
+  /* ============ LOBBY ============ */
+  .l-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .kicker{font-family:var(--poster);font-size:clamp(15px,1.6vw,20px);letter-spacing:.14em;color:var(--cream-dim);text-transform:uppercase}
+  .slots{display:flex;gap:12px;justify-content:center;margin:16px 0 8px}
+  .slot{width:clamp(58px,7vw,84px);aspect-ratio:3/4;background:rgba(0,0,0,.22);border:2px solid var(--cyan);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--poster);font-size:clamp(38px,5vw,60px);color:var(--cyan)}
+  .slots:not(.live) .slot{animation:slotpulse 2.2s ease-in-out infinite}
+  @keyframes slotpulse{0%,100%{box-shadow:0 0 0 rgba(79,227,255,0)}50%{box-shadow:0 0 22px rgba(79,227,255,.35)}}
+  .l-sub{font-size:14px;color:var(--cream-dim);margin-bottom:6px}.l-sub b{color:var(--cream)}
+  .seats{display:grid;grid-template-columns:1fr 1fr;gap:14px;width:min(600px,100%);margin:18px 0}
+  .cam{aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#132844;border:2px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;position:relative}
+  .cam.empty{border-style:dashed;border-color:var(--pink)}
+  .cam .ph{font-size:13px;color:var(--cream-dim);line-height:1.5;padding:12px;text-align:center}
+  .cam .ph .big{font-family:var(--poster);font-size:clamp(20px,2.4vw,30px);color:var(--pink);display:block;margin-bottom:6px}
+  .cam img,.cam video{width:100%;height:100%;object-fit:cover}
+  .cam video{transform:scaleX(-1)}
+  .seatname{font-family:var(--poster);font-size:clamp(14px,1.6vw,20px);letter-spacing:.1em;margin-top:10px;text-transform:uppercase}
+  .seatname.you{color:var(--cyan)}.seatname.them{color:var(--pink)}
+  .l-start{font-size:clamp(30px,4vw,52px);margin-top:6px}
+  .l-note{font-size:13px;color:var(--cream-dim);margin-top:8px;min-height:18px}
+  .l-leave{font-size:13px;color:var(--cream-dim);background:none;border:none;cursor:pointer;margin-top:20px;text-decoration:underline;text-underline-offset:3px}
+  .l-leave:hover{color:var(--cream)}
+
+  /* ============ SHOOTING ============ */
+  #shoot .stage{padding:0}
+  .sh-feed{position:absolute;inset:0;background:#0A1220}
+  .sh-feed::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(110% 90% at 50% 45%,transparent 55%,rgba(6,12,24,.55) 100%)}
+  .sh-feed video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1)}
+  .sh-head{position:absolute;top:18px;left:22px;z-index:20}.sh-head img{width:130px;filter:drop-shadow(0 3px 10px rgba(0,0,0,.6))}
+  .sh-who{position:absolute;top:20px;left:170px;z-index:6;font-family:var(--poster);font-size:15px;letter-spacing:.14em;text-transform:uppercase;padding:5px 12px;border-radius:4px;background:rgba(0,0,0,.4);color:var(--cyan)}
+  .pip{position:absolute;top:18px;right:22px;z-index:14;width:min(26vmin,300px);aspect-ratio:16/9;border-radius:10px;overflow:hidden;background:#250f20;border:2px solid var(--pink);box-shadow:0 8px 30px rgba(0,0,0,.5)}
+  .pip img{width:100%;height:100%;object-fit:cover}
+  .pip .tag{position:absolute;left:8px;bottom:6px;font-family:var(--poster);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--pink);background:rgba(0,0,0,.45);padding:2px 7px;border-radius:3px}
+  .count{position:absolute;top:50%;left:50%;transform:translate(-50%,-54%);z-index:15;font-family:var(--poster);font-size:min(30vmin,320px);line-height:1;color:#fff;text-shadow:4px 0 rgba(79,227,255,.7),-4px 0 rgba(226,74,155,.7),0 6px 40px rgba(0,0,0,.6);pointer-events:none}
+  .count.tick{animation:tick .9s ease-out}
+  @keyframes tick{0%{transform:translate(-50%,-54%) scale(1.5);opacity:0}16%{transform:translate(-50%,-54%) scale(1);opacity:1}100%{transform:translate(-50%,-54%) scale(.94);opacity:.85}}
+  .flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:16}
+  .flash.pop{animation:pop .32s ease-out}
+  @keyframes pop{0%{opacity:.95}100%{opacity:0}}
+  .sh-status{position:absolute;left:50%;bottom:150px;transform:translateX(-50%);z-index:12;text-align:center;background:rgba(6,12,24,.45);padding:8px 20px;border-radius:10px;backdrop-filter:blur(4px)}
+  .sh-status .num{font-family:var(--poster);font-size:26px;letter-spacing:.08em;color:#fff}
+  .sh-status .smile{font-weight:500;font-size:14px;color:var(--cream-dim);margin-top:2px}
+  .sh-strip{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);z-index:12;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .sh-strip .lab{font-family:var(--poster);font-size:12px;letter-spacing:.14em;color:var(--pink);text-transform:uppercase}
+  .sh-strip .cw{display:flex;gap:8px}
+  .sh-strip .cell{width:74px;aspect-ratio:16/9;border-radius:5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);overflow:hidden;position:relative}
+  .sh-strip .cell.filled{border-color:var(--pink)}
+  .sh-strip .cell img{width:100%;height:100%;object-fit:cover}
+  .sh-strip .cell.pop{animation:land .5s ease-out}
+  @keyframes land{0%{transform:translateY(-30px) scale(.6);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+  /* landscape shooting: bottom-center status + strip sit right where the
+     countdown is vertically centered when there's little height to spare.
+     Move them to opposite bottom corners instead of fighting the countdown
+     for the same strip of screen. */
+  @media (orientation:landscape){
+    .sh-status{left:22px;right:auto;bottom:14px;transform:none;text-align:left;padding:6px 14px}
+    .sh-status .num{font-size:20px}
+    .sh-status .smile{font-size:12px}
+    .sh-strip{left:auto;right:22px;bottom:14px;transform:none}
+    .sh-strip .cw{gap:clamp(4px,1vw,8px)}
+    .sh-strip .cell{width:clamp(34px,8vw,74px)}
+  }
+
+  /* ============ PICKING ============ */
+  .work{display:grid;grid-template-columns:minmax(180px,250px) 1fr;gap:clamp(20px,3vw,44px);max-width:1020px;margin:0 auto;width:100%;align-items:start;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:10px}
+  @media (max-width:820px){.work{grid-template-columns:1fr}}
+  @media (max-width:720px){
+    #start .stage{flex-direction:column;gap:14px}
+    .s-right{flex:0 0 auto;flex-direction:row;gap:10px;flex-wrap:wrap;justify-content:center;max-height:34vh;overflow:hidden}
+    .polaroid{width:44%;margin-top:0!important}
+    .s-logo{width:min(72%,320px);margin:8px auto 6px}
+    .s-menu{align-items:center;text-align:center;margin:8px 0}
+    .seats{grid-template-columns:1fr 1fr}
+  }
+  .previewwrap{position:sticky;top:20px;display:flex;flex-direction:column;align-items:center}
+  /* sticky only makes sense as a side column; in the stacked single-column
+     mobile layout it pins the preview on top of the roll/frame/lock-in
+     controls beneath it and eats their taps, so drop it there */
+  @media (max-width:820px){.previewwrap{position:static}}
+  .plabel{font-family:var(--poster);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:12px}
+  .p-paper{background:#0E1C33;padding:8px 8px 10px;width:74%;max-width:200px;border-radius:6px;border:1px solid rgba(79,227,255,.35);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.5),0 0 24px rgba(79,227,255,.08);position:relative}
+  .p-cells{display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
+  #previewFrameImg{position:absolute;inset:8px 8px 10px;width:calc(100% - 16px);height:calc(100% - 18px);object-fit:fill;pointer-events:none;z-index:2}
+  .p-cell{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;background:#16294a;border-radius:1px}
+  .p-cell.shut{background:repeating-linear-gradient(45deg,#132441 0 8px,#0E1C33 8px 16px)}
+  .p-cell img{width:100%;height:100%;object-fit:cover}
+  .p-cell .shutlbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--poster);font-size:9px;letter-spacing:.08em;color:#4FE3FF;opacity:.55;text-align:center;line-height:1.3;text-transform:uppercase}
+  .p-cell .who{position:absolute;top:3px;left:4px;font-family:var(--poster);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45)}
+  .p-cell.shut .who{color:rgba(79,227,255,.5)}
+  .p-stamp{display:flex;justify-content:space-between;align-items:center;font-family:var(--poster);font-size:7px;letter-spacing:.14em;color:rgba(185,180,168,.6);margin-top:7px;text-transform:uppercase;position:relative;z-index:1}
+  .p-stamp .dot{color:var(--pink)}
+  .p-title{font-family:var(--poster);font-size:clamp(26px,3.2vw,42px);line-height:1;text-transform:uppercase}
+  .p-title .hot{color:var(--pink)}
+  .p-lead{font-size:13px;color:var(--cream-dim);margin:6px 0 16px}
+  .rollhead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+  .rollhead .l{font-family:var(--poster);font-size:14px;letter-spacing:.1em;text-transform:uppercase}
+  .rollhead .c{font-family:var(--poster);font-size:20px;color:var(--pink)}
+  .roll{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:22px}
+  .pick{position:relative;aspect-ratio:16/9;border-radius:8px;overflow:hidden;cursor:pointer;background:#132844;border:2px solid transparent;transition:transform .1s;padding:0}
+  .pick img{width:100%;height:100%;object-fit:cover;display:block}
+  .pick:hover{transform:translateY(-2px)}
+  .pick.on{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink)}
+  .pick .n{position:absolute;top:6px;left:6px;width:26px;height:26px;border-radius:50%;background:var(--pink);color:#fff;font-family:var(--poster);font-size:14px;display:none;align-items:center;justify-content:center}
+  .pick.on .n{display:flex}
+  .field{margin-bottom:18px}
+  .field label{display:block;font-family:var(--poster);font-size:12px;letter-spacing:.12em;color:var(--cream-dim);margin-bottom:8px;text-transform:uppercase}
+  .opts{display:flex;gap:7px;flex-wrap:wrap}
+  .chip{font-weight:600;font-size:12px;padding:8px 14px;border-radius:999px;cursor:pointer;background:rgba(0,0,0,.2);border:1.5px solid rgba(255,255,255,.16);color:var(--cream)}
+  .chip.on{background:var(--cyan);border-color:var(--cyan);color:#06323C}
+  .p-go{font-size:clamp(24px,3vw,40px);margin-top:8px}
+  .p-note{font-size:13px;color:var(--cream-dim);margin-top:6px;min-height:18px}
+
+  /* ============ REVEAL ============ */
+  .r-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+  .pre{display:flex;flex-direction:column;align-items:center;gap:20px}
+  .pre .hint{font-size:14px;color:var(--cream-dim);max-width:340px;line-height:1.5}
+  .boo{font-family:var(--poster);font-size:clamp(70px,13vw,180px);line-height:.9;background:none;border:none;color:var(--cream);cursor:pointer;text-transform:uppercase;transition:color .1s,transform .1s}
+  .boo:hover:not(:disabled){color:var(--pink);transform:scale(1.04)}
+  .boo:hover:not(:disabled)::before{content:"▸";color:var(--cyan);margin-right:.1em}
+  .boo:disabled{color:#3E5B85;cursor:not-allowed}
+  .waitmsg{font-size:14px;color:var(--cream-dim);margin-top:10px}
+  .result{display:none;flex-direction:column;align-items:center}
+  .result.on{display:flex}
+  .paperwrap{position:relative}
+  .r-paper{background:#0E1C33;padding:9px 9px 11px;width:min(210px,58vw);border-radius:6px;border:1px solid rgba(79,227,255,.35);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 16px 38px rgba(0,0,0,.55),0 0 28px rgba(79,227,255,.1);position:relative}
+  .r-cells{display:flex;flex-direction:column;gap:4px}
+  .r-cell{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;border-radius:1px;background:#16294a}
+  .r-cell img{width:100%;height:100%;object-fit:cover}
+  .r-stamp{display:flex;justify-content:space-between;align-items:center;font-family:var(--poster);font-size:7px;letter-spacing:.14em;color:rgba(185,180,168,.6);margin-top:8px;text-transform:uppercase}
+  .r-stamp .dot{color:var(--pink)}
+  .curtain{position:absolute;inset:0;z-index:5;border-radius:6px;overflow:hidden;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='c'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='100%25' height='100%25' filter='url(%23c)' opacity='0.95'/></svg>");background-size:200px 200px;opacity:0;pointer-events:none}
+  .curtain.run{animation:surge 1.25s ease-out forwards,jitter .08s steps(2) infinite}
+  @keyframes surge{0%{opacity:0}12%{opacity:1}70%{opacity:1}100%{opacity:0}}
+  @keyframes jitter{0%{background-position:0 0}100%{background-position:22px -14px}}
+  .r-cap{font-family:var(--poster);font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);margin:20px 0 14px;min-height:20px}
+  .r-actions{display:flex;gap:26px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .r-status{font-size:13px;color:var(--cream-dim);margin-top:14px;min-height:18px}
+
+  @media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}.curtain.run{animation:none;opacity:0}#tvflick{display:none}}
+</style>
+</head>
+<body>
+
+<!-- ===================== START ===================== -->
+<section id="start" class="screen on">
+  <div class="stage">
+    <div class="s-left">
+      <img class="s-logo" src="assets/logo.png" alt="Pic A Boo">
+      <nav class="s-menu">
+        <button class="txtbtn" id="btnCreate">Create room</button>
+        <button class="txtbtn" id="btnJoinView">Join your boo</button>
+      </nav>
+      <p class="s-tag">Smile. You don't get to pick which one they keep.</p>
+      <div class="s-foot"><span>PIC A BOO</span><span>2026</span></div>
+    </div>
+    <div class="s-right" id="wall"></div>
+  </div>
+</section>
+
+<!-- ===================== JOIN CODE ENTRY ===================== -->
+<section id="join" class="screen">
+  <div class="stage">
+    <div class="header"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
+    <div class="l-body">
+      <div class="kicker">Enter your boo's code</div>
+      <input id="joinCode" maxlength="4" autocomplete="off" placeholder="CODE"
+        style="margin:18px 0;width:min(320px,80%);text-align:center;text-transform:uppercase;font-family:var(--poster);font-size:44px;letter-spacing:.3em;background:rgba(0,0,0,.22);border:2px solid var(--cyan);border-radius:12px;color:var(--cyan);padding:12px">
+      <button class="txtbtn" id="btnJoin" style="font-size:34px">Join</button>
+      <button class="l-leave" data-home>Back</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== LOBBY ===================== -->
+<section id="lobby" class="screen">
+  <div class="stage">
+    <div class="header"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
+    <div class="l-body">
+      <div class="kicker">Your room code</div>
+      <div class="slots" id="codeSlots"></div>
+      <p class="l-sub" id="lobbySub">Send this to your boo. <b>Nothing happens till they join.</b></p>
+      <div class="seats">
+        <div>
+          <div class="cam" id="youCam"><div class="ph">your camera</div></div>
+          <div class="seatname you">You</div>
+        </div>
+        <div>
+          <div class="cam empty" id="booCam"><div class="ph"><span class="big">waiting…</span>your boo hasn't joined</div></div>
+          <div class="seatname them" id="booName">Empty seat</div>
+        </div>
+      </div>
+      <button class="txtbtn l-start" id="btnStart" disabled>Start</button>
+      <p class="l-note" id="lobbyNote">Waiting for your boo…</p>
+      <button class="l-leave" data-home>Leave room</button>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SHOOTING ===================== -->
+<section id="shoot" class="screen">
+  <div class="stage dark">
+    <div class="sh-feed" id="shFeed"></div>
+    <div class="sh-head"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
+    <div class="sh-who">You</div>
+    <div class="pip"><div id="pipBox" style="width:100%;height:100%"></div><span class="tag">Your boo</span></div>
+    <div class="flash" id="flash"></div>
+    <div class="count" id="count"></div>
+    <div class="sh-status">
+      <div class="num" id="shNum">Get ready…</div>
+      <div class="smile" id="shSmile">smile. you won't see these.</div>
+    </div>
+    <div class="sh-strip">
+      <div class="cw" id="shStrip"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PICKING ===================== -->
+<section id="pick" class="screen">
+  <div class="stage">
+    <div class="header"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
+    <div class="work">
+      <div class="previewwrap">
+        <div class="plabel">The strip so far</div>
+        <div class="p-paper">
+          <div class="p-cells" id="previewCells"></div>
+          <img id="previewFrameImg" alt="" style="display:none">
+          <div class="p-stamp"><span>PIC A BOO</span><span class="dot">●</span><span>NO RETAKES</span></div>
+        </div>
+      </div>
+      <div class="controls">
+        <div class="p-title">Pick <span class="hot">their</span> two</div>
+        <p class="p-lead">This is how your boo shows up. Be kind. Or don't.</p>
+        <div class="rollhead"><span class="l">Your boo's roll</span><span class="c" id="pickCount">0 / 2</span></div>
+        <div class="roll" id="theirRoll"></div>
+        <div class="field">
+          <label>Film</label>
+          <div class="opts" id="filters"></div>
+        </div>
+        <div class="field">
+          <label>Frame</label>
+          <div class="opts" id="frameChips"></div>
+        </div>
+        <button class="txtbtn p-go" id="btnLock" disabled>Lock it in</button>
+        <p class="p-note" id="pickNote">Pick 2 of your boo's shots first.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== REVEAL ===================== -->
+<section id="reveal" class="screen">
+  <div class="stage">
+    <div class="header"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
+    <div class="r-body">
+      <div class="pre" id="revPre">
+        <p class="hint" id="revHint">You both locked your picks. You haven't seen yourself yet. Neither has your boo.</p>
+        <button class="boo" id="btnBoo" disabled>BOO</button>
+        <p class="waitmsg" id="revWait"></p>
+      </div>
+      <div class="result" id="revResult">
+        <div class="paperwrap">
+          <div class="r-paper">
+            <div class="r-cells" id="revCells"></div>
+            <div class="r-stamp"><span>PIC A BOO</span><span class="dot">●</span><span>NO RETAKES</span></div>
+          </div>
+          <div class="curtain" id="curtain"></div>
+        </div>
+        <div class="r-cap" id="revCap"></div>
+        <div class="r-actions">
+          <button class="txtbtn" id="btnDl" style="font-size:28px" hidden>Photo</button>
+          <button class="txtbtn" id="btnVid" style="font-size:28px" hidden>Video</button>
+          <button class="txtbtn" id="btnRematch" style="font-size:22px">Again?</button>
+          <button class="txtbtn" id="btnAgain" style="font-size:16px;color:var(--cream-dim)">Start over</button>
+        </div>
+        <p class="r-status" id="revStatus"></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== GALLERY ===================== -->
+<section id="gallery" class="screen">
+  <div class="stage">
+    <div class="header"><img src="assets/logo.png" alt="Pic A Boo" data-home></div>
+    <div style="flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:6px 4px">
+      <div style="font-family:var(--poster);font-size:clamp(22px,3vw,36px);letter-spacing:.02em;text-transform:uppercase;text-align:center;margin-bottom:6px">Past grids</div>
+      <p style="text-align:center;font-size:13px;color:var(--cream-dim);margin-bottom:20px">Everything you two made. Only on this device.</p>
+      <div id="galleryGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px;max-width:900px;margin:0 auto"></div>
+      <p id="galleryEmpty" style="text-align:center;color:var(--cream-dim);margin-top:40px;display:none">No grids yet. Go make one.</p>
+    </div>
+  </div>
+</section>
+
+<div id="tvflick"></div>
+
+<div id="camfail" style="position:fixed;inset:0;z-index:98;display:none;align-items:center;justify-content:center;background:rgba(11,21,38,.92)">
+  <div style="text-align:center;max-width:340px;padding:24px">
+    <div style="font-family:var(--poster);font-size:30px;letter-spacing:.04em;color:var(--pink);text-transform:uppercase;margin-bottom:12px">No camera</div>
+    <p style="font-size:14px;color:var(--cream-dim);line-height:1.6;margin-bottom:20px">Pic A Boo needs your camera. Click the camera icon in the address bar, choose Allow, then try again.</p>
+    <button class="txtbtn" id="btnCamRetry" style="font-size:24px">Try again</button>
+  </div>
+</div>
+
+<div class="err" id="err"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>
+/* ================= CONFIG ================= */
+const SB_URL = 'https://ogmnssrzxhrqhzlycabe.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9nbW5zc3J6eGhycWh6bHljYWJlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQzMDQxMDIsImV4cCI6MjA5OTg4MDEwMn0.ZpgQVIM2-X3dw8vFn-kSvMRHBSPdCN-4E7MRlt-ga_Y';
+
+const CW=1280, CH=720;               // capture size per shot (16:9)
+const SHOTS = 6;                     // each person shoots 6
+const PICKS = 2;                     // you pick 2 of THEM
+const SNAP_MS = 450, SNAP_W = 192, SNAP_H = 108;
+
+// output strip windows (must match assets/frames/_layout-guide.png)
+const OUT_W = 1080, OUT_H = 1920;
+const WINDOWS = [
+  {x:173,y:150, w:734,h:413,role:'host'},
+  {x:173,y:575, w:734,h:413,role:'guest'},
+  {x:173,y:1000,w:734,h:413,role:'host'},
+  {x:173,y:1425,w:734,h:413,role:'guest'},
+];
+// compositor works in center+size+rotation form so straight and tilted
+// windows draw through the same code path (rotation 0 = old straight rect)
+function toCellWindows(list){
+  return list.map(w=>('cx' in w) ? w : {cx:w.x+w.w/2, cy:w.y+w.h/2, w:w.w, h:w.h, angle:0, role:w.role});
+}
+// per-frame custom window geometry override, for frames whose transparent
+// cutouts don't line up with the shared WINDOWS rect (e.g. tilted/scattered
+// layouts). Straight photostrip frames need no entry here — they use WINDOWS
+// as-is via cellWindowsFor().
+const FRAME_WINDOWS = {};
+function cellWindowsFor(frameId){
+  return toCellWindows(FRAME_WINDOWS[frameId] || WINDOWS);
+}
+// draws img cover-fit into a rotated window {cx,cy,w,h,angle(deg)} on ctx
+function drawCellInto(ctx, img, win, opts){
+  const filter = (opts && opts.filter) || 'none';
+  const alpha = (opts && opts.alpha != null) ? opts.alpha : 1;
+  ctx.save();
+  ctx.translate(win.cx, win.cy);
+  ctx.rotate(win.angle * Math.PI/180);
+  ctx.beginPath(); ctx.rect(-win.w/2, -win.h/2, win.w, win.h); ctx.clip();
+  ctx.filter = filter; ctx.globalAlpha = alpha;
+  const s = Math.max(win.w/img.width, win.h/img.height);
+  const dw = img.width*s, dh = img.height*s;
+  ctx.drawImage(img, -dw/2, -dh/2, dw, dh);
+  ctx.restore();
+}
+
+// custom frames: assets/frames/frame-1.png .. frame-12.png, transparent windows
+const FRAME_SLOTS = 12;
+let FRAMES = [{ id:'none', label:'None', src:null }];
+let chosenFrame = 'none';
+async function discoverFrames(){
+  const probes = [];
+  for (let i=1;i<=FRAME_SLOTS;i++){
+    const src = `assets/frames/frame-${i}.png`;
+    probes.push(new Promise(res=>{
+      const im=new Image();
+      im.onload=()=>res({ id:'f'+i, label:'Frame '+i, src });
+      im.onerror=()=>res(null);
+      im.src=src;
+    }));
+  }
+  (await Promise.all(probes)).forEach(f=>{ if(f) FRAMES.push(f); });
+}
+
+const FILTERS = [
+  { id:'raw',   label:'RAW',      css:'none',                                            grain:.14 },
+  { id:'gold',  label:'Gold 200', css:'saturate(1.25) sepia(.22) brightness(1.04)',      grain:.28 },
+  { id:'night', label:'Night Owl',css:'saturate(.9) hue-rotate(-12deg) contrast(1.12) brightness(.94)', grain:.30 },
+  { id:'noir',  label:'Noir',     css:'grayscale(1) contrast(1.18)',                     grain:.42 },
+];
+
+/* ================= PLUMBING ================= */
+const sb = supabase.createClient(SB_URL, SB_KEY, { realtime:{ params:{ eventsPerSecond:30 } } });
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const me = (() => { let d=localStorage.getItem('pnb_device'); if(!d){d=crypto.randomUUID();localStorage.setItem('pnb_device',d);} return d; })();
+
+let stream=null, channel=null, session=null, isHost=false;
+let other=null, shooting=false, snapTimer=null;
+let uploads=[], pool=[], built=null, revealed=false;
+let myPick=[], theirPick=[];            // photo ids
+let iLocked=false, theyLocked=false;   // explicit lock flags, synced
+let chosenFilter='raw';
+
+function show(name){
+  ['start','join','lobby','shoot','pick','reveal','gallery'].forEach(s => $(s).classList.toggle('on', s===name));
+  const f=$('tvflick'); if(f){ f.classList.remove('run'); void f.offsetWidth; f.classList.add('run'); }
+  window.scrollTo(0,0);
+}
+function fail(msg){ $('err').textContent=msg; $('err').classList.add('on'); setTimeout(()=>$('err').classList.remove('on'),6000); }
+const makeCode = () => Array.from({length:4},()=>'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'[Math.floor(Math.random()*32)]).join('');
+
+
+/* tiny sound engine: shutter click + static burst, no audio files */
+let AC=null;
+function ac(){ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==='suspended')AC.resume(); return AC; }
+function noiseBuf(dur){ const a=ac(); const b=a.createBuffer(1,a.sampleRate*dur,a.sampleRate); const d=b.getChannelData(0); for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1; return b; }
+function shutterSnd(){
+  try{
+    const a=ac(), t=a.currentTime;
+    const n=a.createBufferSource(); n.buffer=noiseBuf(.09);
+    const f=a.createBiquadFilter(); f.type='highpass'; f.frequency.value=1800;
+    const g=a.createGain(); g.gain.setValueAtTime(.5,t); g.gain.exponentialRampToValueAtTime(.001,t+.09);
+    n.connect(f).connect(g).connect(a.destination); n.start(t);
+  }catch(e){}
+}
+function staticSnd(){
+  try{
+    const a=ac(), t=a.currentTime;
+    const n=a.createBufferSource(); n.buffer=noiseBuf(1.1);
+    const f=a.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2600; f.Q.value=.6;
+    const g=a.createGain();
+    g.gain.setValueAtTime(.0001,t);
+    g.gain.exponentialRampToValueAtTime(.4,t+.12);
+    g.gain.setValueAtTime(.4,t+.75);
+    g.gain.exponentialRampToValueAtTime(.001,t+1.1);
+    n.connect(f).connect(g).connect(a.destination); n.start(t);
+  }catch(e){}
+}
+/* ================= CAMERA ================= */
+const cam = document.createElement('video');
+cam.autoplay=true; cam.playsInline=true; cam.muted=true;
+const snapCv = document.createElement('canvas'); snapCv.width=SNAP_W; snapCv.height=SNAP_H;
+
+let camRetryFn=null;
+async function camOn(retryFn){
+  if (stream) return true;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'}, audio:false });
+    cam.srcObject = stream;
+    cam.play&&cam.play().catch(()=>{});
+    $('camfail').style.display='none';
+    return true;
+  }catch(e){
+    camRetryFn = retryFn || null;
+    $('camfail').style.display='flex';
+    return false;
+  }
+}
+function camOff(){ stopSnaps(); if(!stream)return; stream.getTracks().forEach(t=>t.stop()); cam.srcObject=null; stream=null; }
+function mountCam(parent){ parent.innerHTML=''; parent.appendChild(cam); }
+
+function grab(){
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH;
+  const x=c.getContext('2d');
+  const s=Math.max(CW/cam.videoWidth, CH/cam.videoHeight);
+  const dw=cam.videoWidth*s, dh=cam.videoHeight*s;
+  x.translate(CW,0); x.scale(-1,1);
+  x.drawImage(cam,(CW-dw)/2,(CH-dh)/2,dw,dh);
+  return new Promise(r=>c.toBlob(r,'image/jpeg',0.9));
+}
+
+/* ================= SNAPSHOTS ================= */
+function startSnaps(){
+  if (snapTimer) return;
+  snapTimer=setInterval(()=>{
+    if(!stream||!other||!cam.videoWidth)return;
+    const x=snapCv.getContext('2d');
+    x.save(); x.translate(SNAP_W,0); x.scale(-1,1);
+    x.drawImage(cam,0,0,SNAP_W,SNAP_H); x.restore();
+    channel.send({type:'broadcast',event:'snap',payload:{from:me,img:snapCv.toDataURL('image/jpeg',.45)}});
+  }, SNAP_MS);
+}
+function stopSnaps(){ clearInterval(snapTimer); snapTimer=null; }
+function onSnap({payload}){
+  if (payload.from===me || rtcOK) return;   // real video wins if present
+  const bc=$('booCam'); if(bc && bc.classList.contains('on')!==undefined){ bc.classList.remove('empty'); bc.innerHTML=`<img src="${payload.img}" style="width:100%;height:100%;object-fit:cover" alt="">`; }
+  const pb=$('pipBox'); if(pb) pb.innerHTML=`<img src="${payload.img}" style="width:100%;height:100%;object-fit:cover" alt="">`;
+}
+
+
+/* ================= WEBRTC (real-time video, snapshot fallback) ================= */
+const ICE = { iceServers:[
+  { urls:'stun:stun.l.google.com:19302' },
+  { urls:'stun:stun1.l.google.com:19302' },
+]};
+let pc=null, remoteStream=null, rtcOK=false, rtcTimer=null;
+const remoteVid = document.createElement('video');
+remoteVid.autoplay=true; remoteVid.playsInline=true; remoteVid.muted=true;
+
+function mountRemote(parent, mirror){
+  parent.innerHTML='';
+  const v = remoteVid;
+  v.style.width='100%'; v.style.height='100%'; v.style.objectFit='cover';
+  v.style.transform = mirror ? 'scaleX(-1)' : 'none';
+  parent.appendChild(v);
+}
+
+async function startRTC(){
+  if (pc) return;
+  try{
+    pc = new RTCPeerConnection(ICE);
+    // send my camera tracks
+    if (stream) stream.getTracks().forEach(t=>pc.addTrack(t, stream));
+    // receive theirs
+    pc.ontrack = e => {
+      remoteStream = e.streams[0];
+      remoteVid.srcObject = remoteStream;
+      remoteVid.play&&remoteVid.play().catch(()=>{});
+      rtcOK = true;
+      clearTimeout(rtcTimer);
+      // once real video flows, we can stop the snapshot slideshow
+      stopSnaps();
+      showRemoteEverywhere();
+    };
+    pc.onicecandidate = e => {
+      if (e.candidate) channel.send({type:'broadcast',event:'rtc-ice',payload:{from:me,cand:e.candidate}});
+    };
+    pc.onconnectionstatechange = () => {
+      if (['failed','disconnected','closed'].includes(pc.connectionState)){
+        rtcOK=false; startSnaps();   // fall back to snapshots
+      }
+    };
+    // the HOST makes the offer; guest answers (deterministic role avoids glare)
+    if (isHost){
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      channel.send({type:'broadcast',event:'rtc-offer',payload:{from:me,sdp:offer}});
+    }
+    // fallback arm: if no real video in 6s, keep snapshots running
+    clearTimeout(rtcTimer);
+    rtcTimer = setTimeout(()=>{ if(!rtcOK) startSnaps(); }, 6000);
+  }catch(e){ rtcOK=false; startSnaps(); }
+}
+
+async function onRtcOffer({payload}){
+  if (payload.from===me || isHost) return;   // only guest answers
+  try{
+    if (!pc) await startRTC();
+    await pc.setRemoteDescription(payload.sdp);
+    const ans = await pc.createAnswer();
+    await pc.setLocalDescription(ans);
+    channel.send({type:'broadcast',event:'rtc-answer',payload:{from:me,sdp:ans}});
+  }catch(e){ startSnaps(); }
+}
+async function onRtcAnswer({payload}){
+  if (payload.from===me || !isHost || !pc) return;
+  try{ await pc.setRemoteDescription(payload.sdp); }catch(e){}
+}
+async function onRtcIce({payload}){
+  if (payload.from===me || !pc) return;
+  try{ await pc.addIceCandidate(payload.cand); }catch(e){}
+}
+function stopRTC(){ try{ pc&&pc.close(); }catch(e){} pc=null; rtcOK=false; clearTimeout(rtcTimer); }
+
+// put the live remote video wherever the boo should appear
+function showRemoteEverywhere(){
+  if (!rtcOK) return;
+  if ($('lobby').classList.contains('on')){ $('booCam').classList.remove('empty'); mountRemote($('booCam'), true); }
+  if ($('shoot').classList.contains('on')){ mountRemote($('pipBox'), true); }
+}
+
+/* ================= ROOM ================= */
+async function connect(code){
+  channel = sb.channel('room-'+code, { config:{ presence:{ key:me } } });
+  channel
+    .on('presence',{event:'sync'}, onRoster)
+    .on('broadcast',{event:'snap'}, onSnap)
+    .on('broadcast',{event:'rtc-offer'}, onRtcOffer)
+    .on('broadcast',{event:'rtc-answer'}, onRtcAnswer)
+    .on('broadcast',{event:'rtc-ice'}, onRtcIce)
+    .on('broadcast',{event:'shot'}, ({payload})=>{ if(payload.from!==me) onPartnerShotLanded(payload.i, payload.img); })
+    .on('broadcast',{event:'countdown'}, ({payload})=>runShot(payload.shot))
+    .on('broadcast',{event:'finished'}, async ()=>{ await Promise.allSettled(uploads); openReview(); })
+    .on('broadcast',{event:'picks'}, ({payload})=>{ if(payload.from===me)return; theirPick=payload.pick; paintPreview(); paintPickStatus(); paintReveal(); paintRevealStatus(); })
+    .on('broadcast',{event:'locked'}, ({payload})=>{ if(payload.from===me)return; theirPick=payload.pick; theyLocked=true; paintPreview(); paintReveal(); paintRevealStatus(); maybeReadyPing(); })
+    .on('broadcast',{event:'lockping'}, ({payload})=>{ if(payload.from===me)return; if(iLocked){ channel.send({type:'broadcast',event:'locked',payload:{from:me,pick:myPick}}); } })
+    .on('broadcast',{event:'filter'}, ({payload})=>{ if(payload.from!==me) setFilter(payload.id); })
+    .on('broadcast',{event:'boo'}, ()=>doReveal())
+    .on('broadcast',{event:'rematch'}, ({payload})=>{
+      if (payload.from===me) return;
+      resetRound();
+      if (isHost && payload.go===false){
+        // guest requested; host drives
+        startShoot();
+      } else if (!isHost){
+        // host is (re)starting; get ready to receive countdown
+        show('shoot'); mountCam($('shFeed')); buildShStrip(); showRemoteEverywhere();
+        $('shNum').textContent='Here we go again…';
+        $('shSmile').textContent='you asked for it.';
+      }
+    })
+    .on('broadcast',{event:'grid'}, ({payload})=>{ built=payload.path; $('btnDl').hidden=false; $('btnVid').hidden=false; $('btnVid').hidden=false; paintRevealStatus(); });
+  await new Promise((res,rej)=>{
+    channel.subscribe(async s=>{
+      if(s==='SUBSCRIBED'){ await channel.track({host:isHost}); res(); }
+      if(s==='CHANNEL_ERROR'||s==='TIMED_OUT') rej(new Error(s));
+    });
+  });
+}
+
+function onRoster(){
+  const st=channel.presenceState(); const keys=Object.keys(st);
+  if (keys.length>2 && !shooting && keys.indexOf(me)>1){ fail('This booth is full. Pic A Boo is two people.'); return leave(); }
+  other = keys.find(k=>k!==me) || null;
+  $('codeSlots')?.classList.toggle('live', !!other);
+  if (other){
+    $('booName').textContent = st[other][0]?.host ? 'The host' : 'Your boo';
+    startSnaps();          // instant slideshow
+    startRTC();            // upgrades to real video when it connects
+  } else {
+    stopSnaps();
+    $('booName').textContent='Empty seat';
+    $('booCam').classList.add('empty');
+    $('booCam').innerHTML=`<div class="ph"><span class="big">waiting…</span>your boo hasn't joined</div>`;
+    // past the lobby, an empty roster means they dropped
+    stopRTC();
+    if (session && ['shoot','pick','reveal'].some(s=>$(s).classList.contains('on'))){
+      fail("Your boo disconnected. If they reload and rejoin with the same code, you can keep going.");
+    }
+  }
+  if (isHost && !shooting){
+    $('btnStart').disabled=!other;
+    $('lobbySub').innerHTML = other ? 'All set, lovebirds.' : 'Send this to your boo. <b>Nothing happens till they join.</b>';
+    $('lobbyNote').textContent = other ? "Pick your pose. You've got no say after this." : 'Waiting for your boo…';
+  }
+}
+
+async function createRoom(){
+  if (!await camOn(createRoom)) return;
+  isHost=true;
+  const code=makeCode();
+  const { data,error } = await sb.from('sessions').insert({ code, host_device:me }).select().single();
+  if (error) return fail('Could not create the room. '+error.message);
+  session=data;
+  renderCode(code);
+  mountCam($('youCam'));
+  show('lobby');
+  await connect(code);
+}
+
+async function joinRoom(){
+  const code=$('joinCode').value.trim().toUpperCase();
+  if (code.length!==4) return fail('That code is 4 letters.');
+  if (!await camOn(joinRoom)) return;
+  isHost=false;
+  const { data,error } = await sb.from('sessions').select().eq('code',code).single();
+  if (error||!data) return fail('No room with that code.');
+  session=data;
+  renderCode(code);
+  mountCam($('youCam'));
+  $('btnStart').style.display='none';
+  $('lobbyNote').textContent='You\'re in. They start when you\'re both ready.';
+  $('lobbySub').innerHTML='All set, lovebirds.';
+  show('lobby');
+  await connect(code);
+}
+
+function renderCode(code){ $('codeSlots').innerHTML=[...code].map(c=>`<div class="slot">${c}</div>`).join(''); }
+function leave(){ camOff(); location.reload(); }
+
+/* ================= SHOOT ================= */
+async function startShoot(){
+  if (shooting||!other) return;
+  shooting=true; uploads=[]; $('btnStart').disabled=true; lastShot=-1;
+  buildShStrip();
+  show('shoot'); mountCam($('shFeed')); showRemoteEverywhere();
+  for (let i=0;i<SHOTS;i++){
+    channel.send({type:'broadcast',event:'countdown',payload:{shot:i}});
+    await runShot(i);
+    await sleep(700);
+  }
+  channel.send({type:'broadcast',event:'finished'});
+  await Promise.allSettled(uploads);
+  openReview();
+}
+
+function buildShStrip(){
+  $('shStrip').innerHTML = Array.from({length:SHOTS},()=>'<div class="cell"></div>').join('');
+}
+
+let lastShot=-1;
+async function runShot(i){
+  if (i===lastShot) return;      // ignore echoed/duplicate countdown for the same shot
+  lastShot=i;
+  shooting=true;
+  if (!$('shoot').classList.contains('on')){ show('shoot'); mountCam($('shFeed')); buildShStrip(); showRemoteEverywhere(); }
+  $('shNum').textContent = 'Shot '+(i+1)+' of '+SHOTS;
+  for (const n of [3,2,1]){
+    $('count').textContent=n;
+    $('count').classList.remove('tick'); void $('count').offsetWidth; $('count').classList.add('tick');
+    await sleep(900);
+  }
+  $('count').textContent='';
+  $('flash').classList.remove('pop'); void $('flash').offsetWidth; $('flash').classList.add('pop');
+  shutterSnd();
+  const blob = await grab();
+  uploads.push(store(blob, i));
+  // send a small thumbnail of THIS shot to my partner so it lands in THEIR strip
+  sendShotThumb(blob, i);
+  await sleep(320);
+}
+
+// broadcast a downscaled thumbnail of a shot to the other device
+async function sendShotThumb(blob, i){
+  try{
+    const im = await load(URL.createObjectURL(blob));
+    const c=document.createElement('canvas'); c.width=SNAP_W; c.height=SNAP_H;
+    c.getContext('2d').drawImage(im,0,0,SNAP_W,SNAP_H);
+    im.src='';
+    channel.send({type:'broadcast',event:'shot',payload:{from:me,i,img:c.toDataURL('image/jpeg',.5)}});
+  }catch(e){}
+}
+
+async function store(blob,i){
+  const path=`${session.id}/${me}_${i}.jpg`;
+  const up=await sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg',upsert:true});
+  if (up.error) return console.error(up.error);
+  await sb.from('photos').insert({ session_id:session.id, device_id:me, device_label:isHost?'host':'guest', shot_index:i, path });
+}
+
+// partner's shot lands in the shooting strip (you never see your own)
+function onPartnerShotLanded(i,url){
+  const cells=$('shStrip').children;
+  if (!cells[i]) return;
+  cells[i].classList.add('filled','pop');
+  cells[i].innerHTML=`<img src="${url}" alt="">`;
+}
+
+/* ================= REVIEW / PICK ================= */
+async function openReview(){
+  const { data,error } = await sb.from('photos').select().eq('session_id',session.id).order('created_at');
+  if (error) return fail('Could not load the photos.');
+  pool = data.map(p=>({ ...p, url: sb.storage.from('photos').getPublicUrl(p.path).data.publicUrl }));
+  myPick=[]; theirPick=[]; iLocked=false; theyLocked=false; built=null; revealed=false;
+
+  const theirs = pool.filter(p=>p.device_id!==me);
+  if (!theirs.length) return fail('Your boo\'s shots never arrived.');
+
+  // build filter chips
+  $('filters').innerHTML = FILTERS.map((f,i)=>`<span class="chip ${i===0?'on':''}" data-id="${f.id}">${f.label}</span>`).join('');
+  $('filters').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    setFilter(c.dataset.id);
+    channel.send({type:'broadcast',event:'filter',payload:{from:me,id:c.dataset.id}});
+  }));
+
+  // build frame chips (discovered from assets/frames/)
+  $('frameChips').innerHTML = FRAMES.map((f,i)=>`<span class="chip ${f.id===chosenFrame?'on':''}" data-id="${f.id}">${f.label}</span>`).join('');
+  $('frameChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
+    $('frameChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
+    c.classList.add('on'); chosenFrame=c.dataset.id;
+    paintPreview();
+  }));
+
+  // their roll to pick from
+  $('theirRoll').innerHTML = theirs.map(p=>`
+    <button class="pick" data-id="${p.id}"><img src="${p.url}" alt=""><span class="n"></span></button>`).join('');
+  $('theirRoll').querySelectorAll('.pick').forEach(el=>el.addEventListener('click',()=>togglePick(el.dataset.id)));
+
+  buildPreviewCells();
+  show('pick');
+  paintPreview(); paintPickStatus(); armTaunt();
+}
+
+
+function setFilter(id){
+  chosenFilter=id;
+  const g=$('filters');
+  if (g) g.querySelectorAll('.chip').forEach(x=>x.classList.toggle('on', x.dataset.id===id));
+  paintPreview();
+}
+function togglePick(id){
+  const at=myPick.indexOf(id);
+  if (at>-1) myPick.splice(at,1);
+  else if (myPick.length<PICKS) myPick.push(id);
+  else return fail('That\'s 2. Tap one to swap it out.');
+  channel.send({type:'broadcast',event:'picks',payload:{from:me,pick:myPick}});
+  paintMarks(); paintPreview(); paintPickStatus();
+}
+
+function paintMarks(){
+  $('theirRoll').querySelectorAll('.pick').forEach(el=>{
+    const n=myPick.indexOf(el.dataset.id);
+    el.classList.toggle('on',n>-1);
+    el.querySelector('.n').textContent = n>-1 ? n+1 : '';
+  });
+  $('pickCount').textContent = myPick.length+' / '+PICKS;
+}
+
+// strip order (alternating): 0 host, 1 guest, 2 host, 3 guest
+// host cells = host's photos (chosen by guest). guest cells = guest's photos (chosen by host).
+// YOU fill the OTHER person's cells with your picks. YOUR cells are filled by them = hidden until reveal.
+function stripIds(){
+  const hostPicks  = isHost ? theirPick : myPick;   // photos OF the host (picked by guest)
+  const guestPicks = isHost ? myPick : theirPick;   // photos OF the guest (picked by host)
+  return [ hostPicks[0]||null, guestPicks[0]||null, hostPicks[1]||null, guestPicks[1]||null ];
+}
+// which strip cells are "mine" (my face, their pick) -> hidden to me until reveal
+function myCells(){ return isHost ? [0,2] : [1,3]; }
+
+function buildPreviewCells(){
+  const roles=['host','guest','host','guest'];
+  $('previewCells').innerHTML = roles.map((r,i)=>{
+    const mine = myCells().includes(i);
+    return `<div class="p-cell ${mine?'shut':''}" data-i="${i}">
+      <span class="who">${(isHost? (r==='host'?'you':'boo') : (r==='guest'?'you':'boo'))}</span>
+      ${mine?'<span class="shutlbl">their<br>pick</span>':''}
+    </div>`;
+  }).join('');
+}
+
+function applyGrainVar(){
+  const g = FILTERS.find(f=>f.id===chosenFilter)?.grain ?? .14;
+  document.documentElement.style.setProperty('--pgrain', g);
+}
+
+function paintPreview(){
+  const ids=stripIds();
+  const cells=$('previewCells').children;
+  const filt=FILTERS.find(f=>f.id===chosenFilter)?.css||'none';
+  [...cells].forEach((c,i)=>{
+    const mine=myCells().includes(i);
+    if (mine && !revealed) return; // stays shut
+    const p = ids[i] && pool.find(q=>q.id===ids[i]);
+    if (p){ c.classList.remove('shut'); c.innerHTML=`<img src="${p.url}" style="filter:${filt}" alt="">`; }
+    else { c.classList.remove('shut'); c.innerHTML=`<span class="who">${i%2? 'boo':'you'}</span>`; }
+  });
+  const fimg=$('previewFrameImg');
+  const fr=FRAMES.find(f=>f.id===chosenFrame && f.src);
+  if (fimg){ if (fr){ fimg.src=fr.src; fimg.style.display='block'; } else { fimg.style.display='none'; fimg.src=''; } }
+}
+
+function paintPickStatus(){
+  const meOk = myPick.length===PICKS;
+  $('btnLock').disabled = !meOk;
+  $('pickNote').textContent = meOk
+    ? "Locked and loaded. They'll never know till the reveal."
+    : (PICKS-myPick.length)+' more to pick.';
+}
+
+function lockPicks(){
+  if (myPick.length!==PICKS) return;
+  clearTaunt();
+  iLocked=true;
+  // send picks AND a lock flag together so the other side always has both
+  channel.send({type:'broadcast',event:'locked',payload:{from:me,pick:myPick}});
+  goReveal();
+}
+
+
+/* ---- taunt: nudge a slow picker ---- */
+let tauntTimer=null;
+const TAUNTS=[
+  "your boo is waiting. choosing cruelty takes time huh.",
+  "still deciding how they'll look? cold.",
+  "tick tock. they can feel you judging.",
+  "take your time. it's only their face."
+];
+function armTaunt(){
+  clearTimeout(tauntTimer);
+  tauntTimer=setTimeout(()=>{
+    if ($('pick').classList.contains('on') && myPick.length<PICKS){
+      $('pickNote').textContent = TAUNTS[Math.floor(Math.random()*TAUNTS.length)];
+      armTaunt();
+    }
+  }, 15000);
+}
+function clearTaunt(){ clearTimeout(tauntTimer); }
+
+/* ================= REVEAL ================= */
+function goReveal(){
+  buildRevealCells();
+  $('revResult').classList.remove('on');
+  $('revPre').style.display='flex';
+  $('btnBoo').style.display = isHost ? '' : 'none';
+  $('revWait').textContent = isHost ? '' : 'Your boo pulls the trigger.';
+  show('reveal');
+  paintRevealStatus();
+  watchForGrid();
+  armStuckEscape();
+  // ask the other side to (re)confirm their lock, in case their packet was lost
+  channel.send({type:'broadcast',event:'lockping',payload:{from:me}});
+}
+
+function buildRevealCells(){
+  $('revCells').innerHTML = Array.from({length:4},(_,i)=>`<div class="r-cell" data-i="${i}"></div>`).join('');
+}
+
+const bothReady = () => iLocked && theyLocked && myPick.length===PICKS && theirPick.length===PICKS;
+// if we locked but haven't heard the other locked, ask them (covers lost packets)
+function maybeReadyPing(){ paintRevealStatus(); }
+
+/* reveal fallback: if the boo broadcast is lost, watch for the built strip file */
+let gridPoll=null, stuckTimer=null;
+function gridUrl(){ return sb.storage.from('photos').getPublicUrl(`${session.id}/_grid.jpg`).data.publicUrl; }
+function watchForGrid(){
+  if (gridPoll || isHost) return;
+  gridPoll=setInterval(()=>{
+    if (revealed && built){ clearInterval(gridPoll); gridPoll=null; return; }
+    const im=new Image();
+    im.onload=()=>{ built=`${session.id}/_grid.jpg`; if(!revealed) doReveal(); $('btnDl').hidden=false; $('btnVid').hidden=false; paintRevealStatus(); };
+    im.src=gridUrl()+'?t='+Date.now();
+  }, 3000);
+}
+function armStuckEscape(){
+  clearTimeout(stuckTimer);
+  stuckTimer=setTimeout(()=>{
+    if (!revealed && iLocked && !isHost){
+      $('revWait').innerHTML='Both locked. Nothing happening? <button class="txtbtn" id="btnStuck" style="font-size:15px;color:var(--cyan)">Tap to reveal</button>';
+      $('btnStuck').addEventListener('click', ()=>doReveal());
+    }
+  }, 12000);
+}
+
+
+function paintRevealStatus(){
+  if (!$('reveal').classList.contains('on')) return;
+  $('btnBoo').disabled = !(bothReady() && isHost) || revealed;
+  if (!revealed){
+    $('revWait').textContent = bothReady()
+      ? (isHost ? '' : 'Both locked. Your boo hits BOO.')
+      : 'Waiting for your boo to lock their picks…';
+  }
+}
+
+async function pressBoo(){
+  if (!bothReady()) return;
+  $('btnBoo').disabled=true;
+  channel.send({type:'broadcast',event:'boo'});
+  await doReveal();
+  await buildStrip();
+}
+
+async function doReveal(){
+  if (revealed) return;
+  revealed=true;
+  $('revPre').style.display='none';
+  $('revResult').classList.add('on');
+  paintReveal();
+  const curtain=$('curtain');
+  staticSnd();
+  curtain.classList.add('run');
+  reactionSnap();
+  await sleep(1300);
+  curtain.classList.remove('run');
+  $('revCap').textContent='that\'s the two of you';
+}
+
+function paintReveal(){
+  const ids=stripIds();
+  const filt=FILTERS.find(f=>f.id===chosenFilter)?.css||'none';
+  const cells=$('revCells').children;
+  [...cells].forEach((c,i)=>{
+    const p = ids[i] && pool.find(q=>q.id===ids[i]);
+    c.innerHTML = p ? `<img src="${p.url}" style="filter:${filt}" alt="">` : '';
+  });
+}
+
+async function buildStrip(){
+  try{
+    const ids=stripIds();
+    const c=document.createElement('canvas'); c.width=OUT_W; c.height=OUT_H;
+    const x=c.getContext('2d');
+    // navy background
+    x.fillStyle='#24406B'; x.fillRect(0,0,OUT_W,OUT_H);
+    const filt=FILTERS.find(f=>f.id===chosenFilter)?.css||'none';
+    const wins=cellWindowsFor(chosenFrame);
+    for (let n=0;n<4;n++){
+      const p=pool.find(q=>q.id===ids[n]); if(!p)continue;
+      const im=await load(p.url);
+      drawCellInto(x, im, wins[n], {filter:filt});
+      im.src='';
+    }
+    const blobFrame = FRAMES.find(f=>f.id===chosenFrame);
+    if (blobFrame?.src){
+      // custom frame: photos under, frame PNG over. Frame owns the whole canvas.
+      const fi=await load(blobFrame.src);
+      x.drawImage(fi,0,0,OUT_W,OUT_H);
+      fi.src='';
+    } else {
+      // None: app draws its own logo top + year bottom
+      try{ const lg=await load('assets/logo.png'); const lw=OUT_W*0.5, lh=lw*lg.height/lg.width; x.drawImage(lg,(OUT_W-lw)/2,20,lw,lh); lg.src=''; }catch(e){}
+      x.fillStyle='#B9B4A8'; x.font='700 34px Anton, sans-serif'; x.textAlign='center';
+      x.fillText('A GAME FOR TWO · 2026', OUT_W/2, OUT_H-40);
+    }
+
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
+    c.width=c.height=0;
+    const path=`${session.id}/_grid.jpg`;
+    const up=await sb.storage.from('photos').upload(path,blob,{contentType:'image/jpeg',upsert:true});
+    if (up.error) throw up.error;
+    built=path;
+    channel.send({type:'broadcast',event:'grid',payload:{path}});
+    $('btnDl').hidden=false;
+    paintRevealStatus();
+  }catch(e){ fail('Could not build the strip. '+(e.message||e)); }
+}
+
+function load(src){ return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('load failed')); im.src=src; }); }
+
+async function download(){
+  if (!built) return;
+  const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl;
+  const blob=await (await fetch(url)).blob();
+  const name=`pic-a-boo-${session.code}.jpg`;
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
+  URL.revokeObjectURL(a.href);
+  await keep(blob,name);
+}
+
+
+/* ---- rematch: keep the room, jump back into shooting ---- */
+function resetRound(){
+  uploads=[]; pool=[]; built=null; revealed=false; myPick=[]; theirPick=[]; iLocked=false; theyLocked=false; lastShot=-1;
+  chosenFilter='raw'; chosenFrame='none'; shooting=false;
+  const rs=document.getElementById('reactShot'); if(rs) rs.remove();
+  $('revResult').classList.remove('on'); $('revPre').style.display='flex';
+  $('btnDl').hidden=true; $('btnVid').hidden=true; $('revCap').textContent=''; $('revStatus').textContent='';
+  $('btnBoo').disabled=false;
+}
+// Either person can hit "Again?". The HOST always drives the reshoot (like round 1).
+function rematch(){
+  if (!other){ fail('Your boo left. Nothing to rematch.'); return; }
+  if (isHost){
+    channel.send({type:'broadcast',event:'rematch',payload:{from:me,go:true}});
+    resetRound();
+    startShoot();
+  } else {
+    // guest requests; host will start it
+    channel.send({type:'broadcast',event:'rematch',payload:{from:me,go:false}});
+    resetRound();
+    show('shoot'); mountCam($('shFeed')); buildShStrip(); showRemoteEverywhere();
+    $('shNum').textContent='Waiting for the host to start…';
+    $('shSmile').textContent='you asked for it.';
+  }
+}
+
+
+/* ---- reaction burst: candid snap the instant BOO fires ---- */
+async function reactionSnap(){
+  try{
+    if (!stream || !cam.videoWidth) return null;
+    // small delay so the face is mid-reaction, not pre-reveal
+    await sleep(650);
+    const c=document.createElement('canvas'); c.width=CW; c.height=CH;
+    const x=c.getContext('2d');
+    const s=Math.max(CW/cam.videoWidth, CH/cam.videoHeight);
+    const dw=cam.videoWidth*s, dh=cam.videoHeight*s;
+    x.translate(CW,0); x.scale(-1,1);
+    x.drawImage(cam,(CW-dw)/2,(CH-dh)/2,dw,dh);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.85));
+    const url=URL.createObjectURL(blob);
+    // show it as a little candid tucked by the strip
+    const wrap=document.querySelector('#revResult .paperwrap');
+    if (wrap && !document.getElementById('reactShot')){
+      const d=document.createElement('div');
+      d.id='reactShot';
+      d.style.cssText='position:absolute;bottom:-14px;right:-58px;width:120px;transform:rotate(6deg);background:#EFE9DD;padding:5px 5px 14px;border-radius:2px;box-shadow:0 10px 24px rgba(0,0,0,.5);z-index:8';
+      d.innerHTML=`<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block"><div style="font-family:var(--body);font-size:8px;color:#8A8A8A;text-align:center;margin-top:3px">the moment you saw it</div>`;
+      wrap.appendChild(d);
+    }
+    return blob;
+  }catch(e){ return null; }
+}
+
+
+/* ================= MP4 / WEBM VIDEO (signal tune-in) ================= */
+function pickVideoType(){
+  const cands=[
+    ['video/mp4;codecs=h264','mp4'],
+    ['video/mp4','mp4'],
+    ['video/webm;codecs=vp9','webm'],
+    ['video/webm;codecs=vp8','webm'],
+    ['video/webm','webm'],
+  ];
+  for (const [mime,ext] of cands){
+    if (window.MediaRecorder && MediaRecorder.isTypeSupported(mime)) return {mime,ext};
+  }
+  return null;
+}
+
+async function makeVideo(){
+  const type = pickVideoType();
+  if (!type){ fail("This browser can't record video. Use Photo instead."); return; }
+  $('btnVid').textContent='Rendering…'; $('btnVid').disabled=true;
+  try{
+    const ids = stripIds();
+    const imgs = [];
+    for (const id of ids){ const p=pool.find(q=>q.id===id); imgs.push(p?await load(p.url):null); }
+
+    // work at half-res for speed, upscaled on export not needed (story crop is fine)
+    const W=540, H=960;
+    const c=document.createElement('canvas'); c.width=W; c.height=H;
+    const x=c.getContext('2d');
+
+    // scale window coords from 1080x1920 to this canvas
+    const sc=W/OUT_W;
+    const wins=cellWindowsFor(chosenFrame).map(w=>({cx:w.cx*sc,cy:w.cy*sc,w:w.w*sc,h:w.h*sc,angle:w.angle}));
+    const filt=FILTERS.find(f=>f.id===chosenFilter)?.css||'none';
+    const customFrame = FRAMES.find(f=>f.id===chosenFrame && f.src);
+    let frameImg=null; if(customFrame){ try{ frameImg=await load(customFrame.src); }catch(e){} }
+    let logoImg=null; try{ logoImg=await load('assets/logo.png'); }catch(e){}
+
+    // static noise frames (pre-rendered small, tiled)
+    function drawStatic(alpha){
+      x.save(); x.globalAlpha=alpha;
+      for (let i=0;i<1400;i++){
+        const gx=Math.random()*W, gy=Math.random()*H, v=Math.random()*255|0;
+        x.fillStyle=`rgb(${v},${v},${v})`;
+        x.fillRect(gx,gy,2,2);
+      }
+      x.restore();
+    }
+    function drawBase(){
+      x.fillStyle='#24406B'; x.fillRect(0,0,W,H);
+    }
+    function drawCell(i,revealAmt){
+      const w=wins[i], im=imgs[i]; if(!im) return;
+      drawCellInto(x, im, w, {filter:filt, alpha:revealAmt});
+      // static over the not-yet-tuned part
+      if (revealAmt<1){
+        x.save();
+        x.translate(w.cx,w.cy); x.rotate(w.angle*Math.PI/180);
+        x.beginPath(); x.rect(-w.w/2,-w.h/2,w.w,w.h); x.clip();
+        drawStatic((1-revealAmt)*0.9);
+        x.restore();
+      }
+    }
+    function drawChrome(){
+      if (frameImg){ x.drawImage(frameImg,0,0,W,H); return; }
+      if (logoImg){ const lw=W*0.5, lh=lw*logoImg.height/logoImg.width; x.drawImage(logoImg,(W-lw)/2,12,lw,lh); }
+      x.fillStyle='#B9B4A8'; x.font='700 17px Anton, sans-serif'; x.textAlign='center';
+      x.fillText('A GAME FOR TWO · 2026', W/2, H-22);
+    }
+
+    const cstream = c.captureStream(30);
+    const rec = new MediaRecorder(cstream, { mimeType:type.mime, videoBitsPerSecond:4_000_000 });
+    const chunks=[]; rec.ondataavailable=e=>{ if(e.data.size)chunks.push(e.data); };
+    const done = new Promise(res=>rec.onstop=res);
+    rec.start();
+
+    // ---- animation: full static, then tune each cell in one by one, hold ----
+    const t0=performance.now();
+    const DUR=3200; // ms
+    await new Promise(resolve=>{
+      function frame(now){
+        const t=now-t0;
+        drawBase();
+        // global static intro fades over first 500ms
+        const intro = Math.max(0, 1 - t/500);
+        // each cell tunes in staggered
+        for (let i=0;i<4;i++){
+          const start=500+i*450, span=520;
+          let amt=(t-start)/span; amt=Math.max(0,Math.min(1,amt));
+          drawCell(i, amt);
+        }
+        if (intro>0) drawStatic(intro*0.8);
+        drawChrome();
+        if (t<DUR){ requestAnimationFrame(frame); } else { resolve(); }
+      }
+      requestAnimationFrame(frame);
+    });
+    rec.stop();
+    await done;
+
+    const blob=new Blob(chunks,{type:type.mime});
+    c.width=c.height=0;
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=`pic-a-boo-${session.code}.${type.ext}`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    if (type.ext!=='mp4') fail("Saved as .webm (your browser can't record mp4). Plays on phones and uploads to most apps.");
+  }catch(e){ fail('Video failed. '+(e.message||e)+' — use Photo instead.'); }
+  finally{ $('btnVid').textContent='Video'; $('btnVid').disabled=false; }
+}
+
+/* ================= GALLERY ================= */
+function db(){ return new Promise((res,rej)=>{ const r=indexedDB.open('picaboo',1); r.onupgradeneeded=()=>r.result.createObjectStore('grids',{keyPath:'id'}); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function keep(blob,name){ try{ const d=await db(); d.transaction('grids','readwrite').objectStore('grids').put({id:crypto.randomUUID(),at:Date.now(),name,blob}); }catch(e){} }
+async function loadWall(){
+  const wall=$('wall'); let grids=[];
+  try{ const d=await db(); grids=await new Promise((res,rej)=>{ const q=d.transaction('grids').objectStore('grids').getAll(); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); grids.sort((a,b)=>b.at-a.at); }catch(e){ grids=[]; }
+  const tilts=[-6,4,-3,7,-5];
+  wall.innerHTML='';
+  const show=grids.slice(0,5);
+  if (show.length){
+    show.forEach((g,i)=>{ const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`; el.innerHTML=`<img src="${URL.createObjectURL(g.blob)}" alt="">`; wall.appendChild(el); });
+  } else {
+    for (let i=0;i<3;i++){ const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`; el.innerHTML=`<div class="empty">◹◸</div>`; wall.appendChild(el); }
+  }
+}
+
+
+/* ---- full gallery ---- */
+async function openGallery(){
+  show('gallery');
+  const grid=$('galleryGrid'); grid.innerHTML='';
+  let items=[];
+  try{ const d=await db(); items=await new Promise((res,rej)=>{ const q=d.transaction('grids').objectStore('grids').getAll(); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); items.sort((a,b)=>b.at-a.at); }catch(e){ items=[]; }
+  $('galleryEmpty').style.display = items.length ? 'none' : 'block';
+  items.forEach(g=>{
+    const url=URL.createObjectURL(g.blob);
+    const card=document.createElement('div');
+    card.style.cssText='background:#0E1C33;border:1px solid rgba(79,227,255,.25);border-radius:8px;padding:8px;cursor:pointer';
+    const dt=new Date(g.at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    card.innerHTML=`<img src="${url}" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:4px;display:block"><div style="font-family:var(--body);font-size:11px;color:var(--cream-dim);margin-top:6px;text-align:center">${dt}</div>`;
+    card.addEventListener('click',()=>{ const a=document.createElement('a'); a.href=url; a.download=g.name||'pic-a-boo.jpg'; a.click(); });
+    grid.appendChild(card);
+  });
+}
+
+/* ================= WIRING ================= */
+$('btnCreate').addEventListener('click', createRoom);
+$('btnJoinView').addEventListener('click', ()=>show('join'));
+$('btnJoin').addEventListener('click', joinRoom);
+$('btnStart').addEventListener('click', startShoot);
+$('wall').addEventListener('click', openGallery);
+$('wall').style.cursor='pointer';
+$('wall').title='See all your grids';
+$('btnLock').addEventListener('click', lockPicks);
+$('btnBoo').addEventListener('click', pressBoo);
+$('btnDl').addEventListener('click', download);
+$('btnVid').addEventListener('click', makeVideo);
+$('btnAgain').addEventListener('click', ()=>location.reload());
+$('btnRematch').addEventListener('click', rematch);
+$('btnCamRetry').addEventListener('click', ()=>{ $('camfail').style.display='none'; if(camRetryFn) camRetryFn(); });
+document.querySelectorAll('[data-home]').forEach(el=>el.addEventListener('click', leave));
+
+function setVH(){ document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px'); }
+setVH(); window.addEventListener('resize',setVH); window.addEventListener('orientationchange',setVH);
+loadWall();
+discoverFrames();
+// unlock audio on first touch (mobile requires a gesture)
+window.addEventListener('touchstart',()=>{ try{ac();}catch(e){} },{once:true});
+window.addEventListener('click',()=>{ try{ac();}catch(e){} },{once:true});
+</script>
+</body>
+</html>
