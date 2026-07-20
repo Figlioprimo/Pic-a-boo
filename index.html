@@ -391,6 +391,8 @@
 
 <div class="err" id="err"></div>
 
+<div id="adminBadge" style="display:none;position:fixed;top:8px;right:8px;z-index:999;background:var(--pink,#E24A9B);color:#fff;font:bold 12px/1 monospace;letter-spacing:.04em;padding:6px 10px;border-radius:4px;box-shadow:0 4px 12px rgba(0,0,0,.4)">ADMIN MODE — NO CAMERA</div>
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script>
 /* ================= CONFIG ================= */
@@ -468,6 +470,8 @@ const sb = supabase.createClient(SB_URL, SB_KEY, { realtime:{ params:{ eventsPer
 const $ = id => document.getElementById(id);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const me = (() => { let d=localStorage.getItem('pnb_device'); if(!d){d=crypto.randomUUID();localStorage.setItem('pnb_device',d);} return d; })();
+const ADMIN_MODE = new URLSearchParams(location.search).get('admin') === '1';
+if (ADMIN_MODE) $('adminBadge').style.display='block';
 
 let stream=null, channel=null, session=null, isHost=false;
 let other=null, shooting=false, snapTimer=null;
@@ -516,9 +520,51 @@ const cam = document.createElement('video');
 cam.autoplay=true; cam.playsInline=true; cam.muted=true;
 const snapCv = document.createElement('canvas'); snapCv.width=SNAP_W; snapCv.height=SNAP_H;
 
+// admin mode: synthetic camera feed (no getUserMedia) so the app can be
+// driven end-to-end without real camera hardware, e.g. ?admin=1
+function fakeCameraStream(){
+  const c=document.createElement('canvas'); c.width=CW; c.height=CH;
+  const x=c.getContext('2d');
+  const tag='DEVICE '+me.slice(0,8);
+  // hash the device id to a stable hue so two admin tabs are visually distinct
+  let hueSeed=0; for(const ch of me) hueSeed=(hueSeed*31+ch.charCodeAt(0))%360;
+  const t0=performance.now();
+  const draw=()=>{
+    const t=(performance.now()-t0)/1000;
+    const hue=(hueSeed+t*40)%360;
+    x.fillStyle=`hsl(${hue},55%,30%)`;
+    x.fillRect(0,0,CW,CH);
+    const r=90+40*Math.sin(t*2);
+    x.beginPath();
+    x.arc(CW/2+300*Math.sin(t*.7), CH/2+180*Math.cos(t*.9), r, 0, Math.PI*2);
+    x.fillStyle=`hsl(${(hue+180)%360},70%,55%)`;
+    x.fill();
+    x.fillStyle='#fff';
+    x.font='bold 48px sans-serif';
+    x.textAlign='center';
+    x.fillText('ADMIN MODE — NO CAMERA', CW/2, 70);
+    x.font='bold 36px sans-serif';
+    x.fillText(tag, CW/2, CH-40);
+    x.font='28px monospace';
+    x.fillText(new Date().toISOString(), CW/2, CH-90);
+  };
+  draw();
+  const fakeTimer=setInterval(draw, 1000/30);
+  const ms=c.captureStream(30);
+  ms._fakeCameraTimer=fakeTimer; // so camOff() can stop the draw loop
+  return ms;
+}
+
 let camRetryFn=null;
 async function camOn(retryFn){
   if (stream) return true;
+  if (ADMIN_MODE){
+    stream = fakeCameraStream();
+    cam.srcObject = stream;
+    cam.play&&cam.play().catch(()=>{});
+    $('camfail').style.display='none';
+    return true;
+  }
   try{
     stream = await navigator.mediaDevices.getUserMedia({ video:{width:{ideal:1280},height:{ideal:720},facingMode:'user'}, audio:false });
     cam.srcObject = stream;
@@ -531,7 +577,7 @@ async function camOn(retryFn){
     return false;
   }
 }
-function camOff(){ stopSnaps(); if(!stream)return; stream.getTracks().forEach(t=>t.stop()); cam.srcObject=null; stream=null; }
+function camOff(){ stopSnaps(); if(!stream)return; if(stream._fakeCameraTimer)clearInterval(stream._fakeCameraTimer); stream.getTracks().forEach(t=>t.stop()); cam.srcObject=null; stream=null; }
 function mountCam(parent){ parent.innerHTML=''; parent.appendChild(cam); }
 
 function grab(){
