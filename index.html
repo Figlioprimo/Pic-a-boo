@@ -266,6 +266,7 @@
       <div class="kicker">Your room code</div>
       <div class="slots" id="codeSlots"></div>
       <p class="l-sub" id="lobbySub">Send this to your boo. <b>Nothing happens till they join.</b></p>
+      <button class="txtbtn" id="btnShareLink" style="font-size:20px;margin-top:2px" hidden>Share the link</button>
       <div class="seats">
         <div>
           <div class="cam" id="youCam"><div class="ph">your camera</div></div>
@@ -357,6 +358,7 @@
         <div class="r-actions">
           <button class="txtbtn" id="btnDl" style="font-size:28px" hidden>Photo</button>
           <button class="txtbtn" id="btnVid" style="font-size:28px" hidden>Video</button>
+          <button class="txtbtn" id="btnGif" style="font-size:28px" hidden>GIF</button>
           <button class="txtbtn" id="btnRematch" style="font-size:22px">Again?</button>
           <button class="txtbtn" id="btnAgain" style="font-size:16px;color:var(--cream-dim)">Start over</button>
         </div>
@@ -720,7 +722,7 @@ async function connect(code){
         $('shSmile').textContent='you asked for it.';
       }
     })
-    .on('broadcast',{event:'grid'}, ({payload})=>{ built=payload.path; $('btnDl').hidden=false; $('btnVid').hidden=false; paintRevealStatus(); });
+    .on('broadcast',{event:'grid'}, ({payload})=>{ built=payload.path; $('btnDl').hidden=false; $('btnVid').hidden=false; $('btnGif').hidden=false; paintRevealStatus(); });
   await new Promise((res,rej)=>{
     channel.subscribe(async s=>{
       if(s==='SUBSCRIBED'){ await channel.track({host:isHost}); res(); }
@@ -751,6 +753,7 @@ function onRoster(){
   }
   if (isHost && !shooting){
     $('btnStart').disabled=!other;
+    $('btnShareLink').hidden=!!other;
     $('lobbySub').innerHTML = other ? 'All set, lovebirds.' : 'Send this to your boo. <b>Nothing happens till they join.</b>';
     $('lobbyNote').textContent = other ? "Pick your pose. You've got no say after this." : 'Waiting for your boo…';
   }
@@ -764,9 +767,23 @@ async function createRoom(){
   if (error) return fail('Could not create the room. '+error.message);
   session=data;
   renderCode(code);
+  $('btnShareLink').hidden=false;
   mountCam($('youCam'));
   show('lobby');
   await connect(code);
+}
+
+function roomLink(code){ return location.origin+location.pathname+'?room='+code; }
+async function shareRoomLink(){
+  if (!session) return;
+  const url=roomLink(session.code);
+  if (navigator.share){
+    try{ await navigator.share({ url, text:"Get in the booth. Your face is mine tonight." }); return; }
+    catch(e){ if(e.name==='AbortError') return; }
+  }
+  try{ await navigator.clipboard.writeText(url); }
+  catch(e){ return fail('Could not copy the link. The code still works: '+session.code); }
+  const b=$('btnShareLink'); b.textContent='Copied!'; setTimeout(()=>b.textContent='Share the link',1400);
 }
 
 async function joinRoom(){
@@ -1030,7 +1047,7 @@ function watchForGrid(){
   gridPoll=setInterval(()=>{
     if (revealed && built){ clearInterval(gridPoll); gridPoll=null; return; }
     const im=new Image();
-    im.onload=()=>{ built=`${session.id}/_grid.jpg`; if(!revealed) doReveal(); $('btnDl').hidden=false; $('btnVid').hidden=false; paintRevealStatus(); };
+    im.onload=()=>{ built=`${session.id}/_grid.jpg`; if(!revealed) doReveal(); $('btnDl').hidden=false; $('btnVid').hidden=false; $('btnGif').hidden=false; paintRevealStatus(); };
     im.src=gridUrl()+'?t='+Date.now();
   }, 3000);
 }
@@ -1124,7 +1141,7 @@ async function buildStrip(){
     if (up.error) throw up.error;
     built=path;
     channel.send({type:'broadcast',event:'grid',payload:{path}});
-    $('btnDl').hidden=false;
+    $('btnDl').hidden=false; $('btnVid').hidden=false; $('btnGif').hidden=false;
     paintRevealStatus();
   }catch(e){ fail('Could not build the strip. '+(e.message||e)); }
 }
@@ -1162,7 +1179,7 @@ function resetRound(){
   chosenFilter='raw'; chosenFrame='none'; shooting=false;
   const rs=document.getElementById('reactShot'); if(rs) rs.remove();
   $('revResult').classList.remove('on'); $('revPre').style.display='flex';
-  $('btnDl').hidden=true; $('btnVid').hidden=true; $('revCap').textContent=''; $('revStatus').textContent='';
+  $('btnDl').hidden=true; $('btnVid').hidden=true; $('btnGif').hidden=true; $('revCap').textContent=''; $('revStatus').textContent='';
   $('btnBoo').disabled=false;
 }
 // Either person can hit "Again?". The HOST always drives the reshoot (like round 1).
@@ -1226,59 +1243,79 @@ function pickVideoType(){
   return null;
 }
 
+// shared signal-tune-in animation scene, used by both the Video and GIF exports.
+// drawAt(t) paints the frame at time t (ms) of a STRIP_ANIM_MS-long animation.
+const STRIP_ANIM_MS = 3200;
+async function stripScene(W,H){
+  const ids = stripIds();
+  const imgs = [];
+  for (const id of ids){ const p=pool.find(q=>q.id===id); imgs.push(p?await load(p.url):null); }
+
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+
+  // scale window coords from 1080x1920 to this canvas
+  const sc=W/OUT_W, s=W/540;
+  const wins=cellWindowsFor(chosenFrame).map(w=>({cx:w.cx*sc,cy:w.cy*sc,w:w.w*sc,h:w.h*sc,angle:w.angle}));
+  const filt=FILTERS.find(f=>f.id===chosenFilter)?.css||'none';
+  const customFrame = FRAMES.find(f=>f.id===chosenFrame && f.src);
+  let frameImg=null; if(customFrame){ try{ frameImg=await load(customFrame.src); }catch(e){} }
+  let logoImg=null; try{ logoImg=await load('assets/logo.png'); }catch(e){}
+
+  function drawStatic(alpha){
+    x.save(); x.globalAlpha=alpha;
+    const n=(W*H/370)|0;
+    for (let i=0;i<n;i++){
+      const gx=Math.random()*W, gy=Math.random()*H, v=Math.random()*255|0;
+      x.fillStyle=`rgb(${v},${v},${v})`;
+      x.fillRect(gx,gy,2,2);
+    }
+    x.restore();
+  }
+  function drawBase(){
+    x.fillStyle='#24406B'; x.fillRect(0,0,W,H);
+  }
+  function drawCell(i,revealAmt){
+    const w=wins[i], im=imgs[i]; if(!im) return;
+    drawCellInto(x, im, w, {filter:filt, alpha:revealAmt});
+    // static over the not-yet-tuned part
+    if (revealAmt<1){
+      x.save();
+      x.translate(w.cx,w.cy); x.rotate(w.angle*Math.PI/180);
+      x.beginPath(); x.rect(-w.w/2,-w.h/2,w.w,w.h); x.clip();
+      drawStatic((1-revealAmt)*0.9);
+      x.restore();
+    }
+  }
+  function drawChrome(){
+    if (frameImg){ x.drawImage(frameImg,0,0,W,H); return; }
+    if (logoImg){ const lw=W*0.5, lh=lw*logoImg.height/logoImg.width; x.drawImage(logoImg,(W-lw)/2,12*s,lw,lh); }
+    x.fillStyle='#B9B4A8'; x.font=`700 ${17*s}px Anton, sans-serif`; x.textAlign='center';
+    x.fillText('A GAME FOR TWO · 2026', W/2, H-22*s);
+  }
+  // full static, then each cell tunes in staggered, then hold
+  function drawAt(t){
+    drawBase();
+    const intro = Math.max(0, 1 - t/500);
+    for (let i=0;i<4;i++){
+      const start=500+i*450, span=520;
+      let amt=(t-start)/span; amt=Math.max(0,Math.min(1,amt));
+      drawCell(i, amt);
+    }
+    if (intro>0) drawStatic(intro*0.8);
+    drawChrome();
+  }
+  return { canvas:c, drawAt };
+}
+
 async function makeVideo(){
   const type = pickVideoType();
   if (!type){ fail("This browser can't record video. Use Photo instead."); return; }
   $('btnVid').textContent='Rendering…'; $('btnVid').disabled=true;
   try{
-    const ids = stripIds();
-    const imgs = [];
-    for (const id of ids){ const p=pool.find(q=>q.id===id); imgs.push(p?await load(p.url):null); }
-
     // work at half-res for speed, upscaled on export not needed (story crop is fine)
-    const W=540, H=960;
-    const c=document.createElement('canvas'); c.width=W; c.height=H;
-    const x=c.getContext('2d');
-
-    // scale window coords from 1080x1920 to this canvas
-    const sc=W/OUT_W;
-    const wins=cellWindowsFor(chosenFrame).map(w=>({cx:w.cx*sc,cy:w.cy*sc,w:w.w*sc,h:w.h*sc,angle:w.angle}));
-    const filt=FILTERS.find(f=>f.id===chosenFilter)?.css||'none';
-    const customFrame = FRAMES.find(f=>f.id===chosenFrame && f.src);
-    let frameImg=null; if(customFrame){ try{ frameImg=await load(customFrame.src); }catch(e){} }
-    let logoImg=null; try{ logoImg=await load('assets/logo.png'); }catch(e){}
-
-    // static noise frames (pre-rendered small, tiled)
-    function drawStatic(alpha){
-      x.save(); x.globalAlpha=alpha;
-      for (let i=0;i<1400;i++){
-        const gx=Math.random()*W, gy=Math.random()*H, v=Math.random()*255|0;
-        x.fillStyle=`rgb(${v},${v},${v})`;
-        x.fillRect(gx,gy,2,2);
-      }
-      x.restore();
-    }
-    function drawBase(){
-      x.fillStyle='#24406B'; x.fillRect(0,0,W,H);
-    }
-    function drawCell(i,revealAmt){
-      const w=wins[i], im=imgs[i]; if(!im) return;
-      drawCellInto(x, im, w, {filter:filt, alpha:revealAmt});
-      // static over the not-yet-tuned part
-      if (revealAmt<1){
-        x.save();
-        x.translate(w.cx,w.cy); x.rotate(w.angle*Math.PI/180);
-        x.beginPath(); x.rect(-w.w/2,-w.h/2,w.w,w.h); x.clip();
-        drawStatic((1-revealAmt)*0.9);
-        x.restore();
-      }
-    }
-    function drawChrome(){
-      if (frameImg){ x.drawImage(frameImg,0,0,W,H); return; }
-      if (logoImg){ const lw=W*0.5, lh=lw*logoImg.height/logoImg.width; x.drawImage(logoImg,(W-lw)/2,12,lw,lh); }
-      x.fillStyle='#B9B4A8'; x.font='700 17px Anton, sans-serif'; x.textAlign='center';
-      x.fillText('A GAME FOR TWO · 2026', W/2, H-22);
-    }
+    const scene = await stripScene(540,960);
+    const c=scene.canvas;
 
     const cstream = c.captureStream(30);
     const rec = new MediaRecorder(cstream, { mimeType:type.mime, videoBitsPerSecond:4_000_000 });
@@ -1286,24 +1323,12 @@ async function makeVideo(){
     const done = new Promise(res=>rec.onstop=res);
     rec.start();
 
-    // ---- animation: full static, then tune each cell in one by one, hold ----
     const t0=performance.now();
-    const DUR=3200; // ms
     await new Promise(resolve=>{
       function frame(now){
         const t=now-t0;
-        drawBase();
-        // global static intro fades over first 500ms
-        const intro = Math.max(0, 1 - t/500);
-        // each cell tunes in staggered
-        for (let i=0;i<4;i++){
-          const start=500+i*450, span=520;
-          let amt=(t-start)/span; amt=Math.max(0,Math.min(1,amt));
-          drawCell(i, amt);
-        }
-        if (intro>0) drawStatic(intro*0.8);
-        drawChrome();
-        if (t<DUR){ requestAnimationFrame(frame); } else { resolve(); }
+        scene.drawAt(t);
+        if (t<STRIP_ANIM_MS){ requestAnimationFrame(frame); } else { resolve(); }
       }
       requestAnimationFrame(frame);
     });
@@ -1316,6 +1341,37 @@ async function makeVideo(){
     if (type.ext!=='mp4') fail("Saved as .webm (your browser can't record mp4). Plays on phones and uploads to most apps.");
   }catch(e){ fail('Video failed. '+(e.message||e)+'. Use Photo instead.'); }
   finally{ $('btnVid').textContent='Video'; $('btnVid').disabled=false; }
+}
+
+let gifenc=null;
+async function makeGif(){
+  $('btnGif').textContent='Rendering…'; $('btnGif').disabled=true;
+  try{
+    gifenc = gifenc || await import('https://cdn.jsdelivr.net/npm/gifenc@1.0.3/+esm');
+    const { GIFEncoder, quantize, applyPalette } = gifenc;
+
+    // small canvas: GIFs get heavy fast
+    const W=360, H=640;
+    const scene = await stripScene(W,H);
+    const x=scene.canvas.getContext('2d');
+
+    const gif=GIFEncoder();
+    const FPS=12, STEP=1000/FPS;
+    for (let t=0;t<=STRIP_ANIM_MS;t+=STEP){
+      scene.drawAt(t);
+      const {data}=x.getImageData(0,0,W,H);
+      const palette=quantize(data,256);
+      gif.writeFrame(applyPalette(data,palette),W,H,{palette,delay:STEP});
+      // let the UI breathe between frames
+      await sleep(0);
+    }
+    gif.finish();
+
+    const blob=new Blob([gif.bytes()],{type:'image/gif'});
+    scene.canvas.width=scene.canvas.height=0;
+    await saveOrShare(blob,`pic-a-boo-${session.code}.gif`,'image/gif');
+  }catch(e){ fail('GIF failed. '+(e.message||e)+'. Use Photo or Video instead.'); }
+  finally{ $('btnGif').textContent='GIF'; $('btnGif').disabled=false; }
 }
 
 /* ================= GALLERY ================= */
@@ -1365,10 +1421,25 @@ $('btnLock').addEventListener('click', lockPicks);
 $('btnBoo').addEventListener('click', pressBoo);
 $('btnDl').addEventListener('click', download);
 $('btnVid').addEventListener('click', makeVideo);
+$('btnGif').addEventListener('click', makeGif);
 $('btnAgain').addEventListener('click', ()=>location.reload());
 $('btnRematch').addEventListener('click', rematch);
 $('btnCamRetry').addEventListener('click', ()=>{ $('camfail').style.display='none'; if(camRetryFn) camRetryFn(); });
+$('btnShareLink').addEventListener('click', shareRoomLink);
 document.querySelectorAll('[data-home]').forEach(el=>el.addEventListener('click', leave));
+
+// join links: ?room=CODE opens the join screen with the code filled in.
+// The param is stripped from the URL right away so Back and reloads land on start.
+(() => {
+  const p=new URLSearchParams(location.search);
+  const rm=(p.get('room')||'').trim().toUpperCase();
+  if (!/^[A-Z2-9]{4}$/.test(rm)) return;
+  p.delete('room');
+  const qs=p.toString();
+  history.replaceState(null,'',location.pathname+(qs?'?'+qs:''));
+  $('joinCode').value=rm;
+  show('join');
+})();
 
 function setVH(){ document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px'); }
 setVH(); window.addEventListener('resize',setVH); window.addEventListener('orientationchange',setVH);
