@@ -96,6 +96,31 @@
   #tvflick.run{animation:flick .24s steps(3)}
   @keyframes flick{0%{opacity:.55}100%{opacity:0}}
 
+  /* once in a while, a roll bar sweeps down like a TV losing vertical hold.
+     One 17s cycle: the sweep lives in the first ~7%, the rest is nothing.
+     17 vs the logo's 7s loop keeps the two gimmicks drifting out of sync. */
+  #tvwave{
+    position:fixed;inset:0;z-index:96;pointer-events:none;opacity:0;
+    background:linear-gradient(180deg,transparent 0%,rgba(79,227,255,.06) 22%,rgba(255,255,255,.10) 44%,rgba(255,255,255,.17) 52%,rgba(10,18,36,.28) 66%,transparent 100%);
+    background-size:100% 130px;background-repeat:no-repeat;background-position:0 -140px;
+    animation:tvwave 17s linear infinite;
+  }
+  @keyframes tvwave{
+    0%{opacity:1;background-position:0 -140px}
+    7%{opacity:1;background-position:0 calc(100% + 140px)}
+    7.2%,100%{opacity:0;background-position:0 -140px}
+  }
+  /* the picture wobbles gently while the bar passes */
+  .stage{animation:stagewobble 17s linear infinite}
+  @keyframes stagewobble{
+    0%,1.5%{transform:none}
+    2.2%{transform:translateX(1.5px) scaleY(1.004)}
+    3.6%{transform:translateX(-1.5px)}
+    5%{transform:translateX(1px) scaleY(1.003)}
+    6.4%{transform:translateX(-.5px)}
+    7%,100%{transform:none}
+  }
+
   .err{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;background:#7A1233;color:#fff;font-family:var(--body);font-size:13px;padding:12px 20px;border-radius:8px;max-width:90%;text-align:center;display:none}
   .err.on{display:block}
 
@@ -419,6 +444,7 @@
 </section>
 
 <div id="tvflick"></div>
+<div id="tvwave"></div>
 
 <div id="camfail" style="position:fixed;inset:0;z-index:98;display:none;align-items:center;justify-content:center;background:rgba(11,21,38,.92)">
   <div style="text-align:center;max-width:340px;padding:24px">
