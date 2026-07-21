@@ -142,13 +142,18 @@
   /* ============ START ============ */
   #start .stage{flex-direction:row;gap:clamp(20px,3vw,48px)}
   .s-left{flex:1 1 58%;display:flex;flex-direction:column;min-width:0}
-  .s-logo{width:min(94%,560px);margin:clamp(6px,2vh,26px) 0 auto;filter:drop-shadow(0 6px 18px rgba(0,0,0,.28))}
-  .s-menu{display:flex;flex-direction:column;align-items:flex-start;gap:14px;margin:auto 0}
-  .s-item{display:flex;flex-direction:column;align-items:flex-start}
-  .s-menu button{font-size:clamp(42px,6.6vw,90px);line-height:1.05;color:var(--cream)}
+  /* left column: logo pinned top, foot pinned bottom, and the menu+tagline+link
+     sit as one block centred in the space between (two auto margins, not four,
+     so the tagline stays attached to the menu instead of floating) */
+  .s-logo{width:min(84%,500px);max-height:24vh;object-fit:contain;object-position:left center;margin:clamp(6px,2vh,22px) 0 0;filter:drop-shadow(0 6px 18px rgba(0,0,0,.28))}
+  /* menu buttons scale with the SMALLER of width/height so a short window can't
+     pack them; the gap between the two CTAs grows with spare vertical room */
+  .s-menu{display:flex;flex-direction:column;align-items:flex-start;gap:clamp(16px,3.6vh,36px);margin:auto 0 0}
+  .s-item{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+  .s-menu button{font-size:clamp(38px,min(5.6vw,8vh),74px);line-height:1.02;color:var(--cream)}
   /* one plain-language line under each CTA: what it does, not just what it's called */
   .s-sub{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:500;font-size:clamp(12.5px,1.1vw,14.5px);color:var(--cream-dim);opacity:.85;margin-top:0}
-  .s-tag{font-weight:500;font-size:clamp(12px,1.2vw,14px);color:var(--cream-dim);opacity:.8;margin-top:18px;max-width:520px;line-height:1.5}
+  .s-tag{font-weight:500;font-size:clamp(12px,1.2vw,14px);color:var(--cream-dim);opacity:.8;margin-top:clamp(12px,2.6vh,26px);max-width:520px;line-height:1.5}
   .s-how{align-self:flex-start;text-align:left;font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:600;font-size:clamp(12px,1.1vw,14px);color:var(--cyan);background:none;border:none;cursor:pointer;margin-top:10px;padding:0;text-decoration:underline;text-underline-offset:3px}
   .s-how:hover{color:var(--pink)}
   /* ============ HOW IT WORKS ============ */
