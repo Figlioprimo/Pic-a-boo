@@ -856,6 +856,7 @@ function booArrived(){
   if (!$('lobby').classList.contains('on')) return;
   const bc=$('booCam');
   bc.classList.remove('empty');
+  bc.innerHTML=''; // clear the "hasn't joined" placeholder now; the first snapshot/RTC frame fills it in
   if (!REDUCED){ bc.classList.remove('seatin'); void bc.offsetWidth; bc.classList.add('seatin'); confettiMini(bc); }
   arrivalUntil=Date.now()+2600;
   $('lobbyNote').textContent='Your boo is here. No backing out now.';
@@ -1242,6 +1243,7 @@ function paintRevealStatus(){
       ? (isHost ? '' : 'Both locked. Your boo hits BOO.')
       : 'Waiting for your boo to lock their picks…';
   }
+  if (built) $('revStatus').textContent='';
 }
 
 async function pressBoo(){
@@ -1340,13 +1342,7 @@ async function buildStrip(){
 
 function load(src){ return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('load failed')); im.src=src; }); }
 
-// phones get the OS share sheet (straight to Stories etc.); everyone else gets a download
-async function saveOrShare(blob,name,mime){
-  const file=new File([blob],name,{type:mime});
-  if (navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file]}); return; }
-    catch(e){ if (e && e.name==='AbortError') return; } // user closed the sheet; not an error
-  }
+async function saveBlob(blob,name,mime){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -1359,7 +1355,7 @@ async function download(){
     const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl+'?v='+Date.now();
     const blob=await (await fetch(url)).blob();
     const name=`pic-a-boo-${session.code}.jpg`;
-    await saveOrShare(blob,name,'image/jpeg');
+    await saveBlob(blob,name,'image/jpeg');
     await keep(blob,name);
   }catch(e){ fail('Could not save the photo. '+(e.message||e)); }
   finally{ btn.textContent=was; btn.disabled=false; }
@@ -1531,7 +1527,7 @@ async function makeVideo(){
 
     const blob=new Blob(chunks,{type:type.mime});
     c.width=c.height=0;
-    await saveOrShare(blob,`pic-a-boo-${session.code}.${type.ext}`,type.mime);
+    await saveBlob(blob,`pic-a-boo-${session.code}.${type.ext}`,type.mime);
     if (type.ext!=='mp4') fail("Saved as .webm (your browser can't record mp4). Plays on phones and uploads to most apps.");
   }catch(e){ fail('Video failed. '+(e.message||e)+'. Use Photo instead.'); }
   finally{ $('btnVid').textContent='Video'; $('btnVid').disabled=false; }
@@ -1566,7 +1562,7 @@ async function makeGif(){
 
     const blob=new Blob([gif.bytes()],{type:'image/gif'});
     scene.canvas.width=scene.canvas.height=0;
-    await saveOrShare(blob,`pic-a-boo-${session.code}.gif`,'image/gif');
+    await saveBlob(blob,`pic-a-boo-${session.code}.gif`,'image/gif');
   }catch(e){ fail('GIF failed. '+(e.message||e)+'. Use Photo or Video instead.'); }
   finally{ $('btnGif').textContent='GIF'; $('btnGif').disabled=false; }
 }
