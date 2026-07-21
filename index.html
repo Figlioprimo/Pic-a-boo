@@ -42,7 +42,7 @@
   .stage{
     position:relative;flex:1;margin:clamp(10px,1.6vw,20px);border-radius:clamp(14px,2vw,24px);overflow:hidden;min-height:0;
     background:radial-gradient(130% 100% at 50% 12%, #2E5288 0%, var(--navy) 52%, #16294A 88%, #10203C 100%);
-    display:flex;flex-direction:column;padding:clamp(20px,3vw,44px);
+    display:flex;flex-direction:column;padding:clamp(20px,3vw,44px);padding-bottom:calc(clamp(20px,3vw,44px) + env(safe-area-inset-bottom));
     border:1px solid rgba(79,227,255,.18);
     box-shadow:
       inset 0 0 80px rgba(4,10,22,.55),
@@ -226,7 +226,7 @@
   }
 
   /* ============ PICKING ============ */
-  .work{display:grid;grid-template-columns:minmax(180px,250px) 1fr;gap:clamp(20px,3vw,44px);max-width:1020px;margin:0 auto;width:100%;align-items:start;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:10px}
+  .work{display:grid;grid-template-columns:minmax(180px,250px) 1fr;gap:clamp(20px,3vw,44px);max-width:1020px;margin:0 auto;width:100%;align-items:start;flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding-bottom:calc(10px + env(safe-area-inset-bottom))}
   @media (max-width:820px){.work{grid-template-columns:1fr}}
   @media (max-width:720px){
     #start .stage{flex-direction:column;gap:14px}
@@ -276,7 +276,7 @@
   .chip.on{background:var(--cyan);border-color:var(--cyan);color:#06323C;box-shadow:0 0 16px rgba(79,227,255,.45);transform:scale(1.06)}
   .framechip{width:54px;aspect-ratio:9/16;padding:0;border-radius:8px;overflow:hidden;background:rgba(0,0,0,.35);border:1.5px solid rgba(255,255,255,.22);display:inline-flex;align-items:center;justify-content:center;vertical-align:top}
   .framechip img{width:100%;height:100%;object-fit:cover;display:block}
-  .framechip .nofr{font-family:var(--poster);font-size:16px;color:var(--cream-dim)}
+  .framechip .nofr{object-fit:contain!important;padding:8px;opacity:.6}
   .framechip.on{background:rgba(0,0,0,.35);border-color:var(--pink);box-shadow:0 0 0 2px var(--pink),0 0 12px rgba(226,74,155,.55);color:var(--cream)}
   .p-go{font-size:clamp(30px,4vw,52px);margin-top:8px}
   .p-note{font-size:12px;color:var(--cream-dim);opacity:.75;margin-top:6px;min-height:18px}
@@ -1065,7 +1065,7 @@ async function openReview(){
   }));
 
   // build frame chips (discovered from assets/frames/) as mini strip previews
-  $('frameChips').innerHTML = FRAMES.map(f=>`<span class="chip framechip ${f.id===chosenFrame?'on':''}" data-id="${f.id}" title="${f.label}">${f.src?`<img src="${f.thumb||f.src}" alt="${f.label}">`:`<span class="nofr">◹◸</span>`}</span>`).join('');
+  $('frameChips').innerHTML = FRAMES.map(f=>`<span class="chip framechip ${f.id===chosenFrame?'on':''}" data-id="${f.id}" title="${f.label}">${f.src?`<img src="${f.thumb||f.src}" alt="${f.label}">`:`<img class="nofr" src="assets/logo.png" alt="${f.label}">`}</span>`).join('');
   $('frameChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
     $('frameChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
     c.classList.add('on'); chosenFrame=c.dataset.id;
@@ -1661,6 +1661,7 @@ setInterval(()=>{
 
 function setVH(){ document.documentElement.style.setProperty('--vh',(window.innerHeight*0.01)+'px'); }
 setVH(); window.addEventListener('resize',setVH); window.addEventListener('orientationchange',setVH);
+if (window.visualViewport) window.visualViewport.addEventListener('resize',setVH);
 loadWall();
 discoverFrames();
 // unlock audio on first touch (mobile requires a gesture)
