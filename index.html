@@ -447,6 +447,7 @@
           <div class="r-paper">
             <div class="r-cells" id="revCells"></div>
             <div class="r-stamp"><span>PIC A BOO</span><span class="dot">●</span><span>NO RETAKES</span></div>
+            <img id="revFinalImg" alt="" style="display:none;width:100%;border-radius:2px">
           </div>
           <div class="curtain" id="curtain"></div>
         </div>
@@ -1243,7 +1244,22 @@ function paintRevealStatus(){
       ? (isHost ? '' : 'Both locked. Your boo hits BOO.')
       : 'Waiting for your boo to lock their picks…';
   }
-  if (built) $('revStatus').textContent='';
+  if (built){ $('revStatus').textContent=''; showFinalStrip(); }
+}
+
+// once the framed strip is actually built, swap the raw cell preview for the
+// real finished (frame-included) picture instead of leaving the generic stamp up
+let finalShown=false;
+function showFinalStrip(){
+  if (!built || finalShown) return;
+  finalShown=true;
+  const img=$('revFinalImg');
+  img.onload=()=>{
+    $('revCells').style.display='none';
+    document.querySelector('#revResult .r-stamp').style.display='none';
+    img.style.display='block';
+  };
+  img.src=gridUrl()+'?v='+Date.now();
 }
 
 async function pressBoo(){
@@ -1370,6 +1386,8 @@ function resetRound(){
   $('revResult').classList.remove('on'); $('revPre').style.display='flex';
   $('btnDl').hidden=true; $('btnVid').hidden=true; $('btnGif').hidden=true; $('revCap').textContent=''; $('revStatus').textContent='';
   $('btnBoo').disabled=false;
+  finalShown=false; $('revFinalImg').style.display='none'; $('revFinalImg').src='';
+  $('revCells').style.display=''; document.querySelector('#revResult .r-stamp').style.display='';
 }
 // Either person can hit "Again?". The HOST always drives the reshoot (like round 1).
 function rematch(){
