@@ -242,7 +242,7 @@
      controls beneath it and eats their taps, so drop it there */
   @media (max-width:820px){.previewwrap{position:static}}
   .plabel{font-family:var(--poster);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:12px}
-  .p-paper{background:#0B1729;padding:8px 8px 10px;width:74%;max-width:200px;border-radius:8px;border:1px solid rgba(79,227,255,.45);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.55),0 0 34px rgba(79,227,255,.14);position:relative}
+  .p-paper{background:#0B1729;padding:8px 8px 10px;width:94%;max-width:280px;border-radius:8px;border:1px solid rgba(79,227,255,.45);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.55),0 0 34px rgba(79,227,255,.14);position:relative}
   .p-cells{display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
   #previewFrameImg{position:absolute;inset:8px 8px 10px;width:calc(100% - 16px);height:calc(100% - 18px);object-fit:fill;pointer-events:none;z-index:2}
   .p-cell{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;background:#16294a;border-radius:1px}
@@ -252,6 +252,7 @@
   .p-cell .who{position:absolute;top:3px;left:4px;font-family:var(--poster);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45)}
   .p-cell.shut .who{color:rgba(79,227,255,.5)}
   .p-stamp{display:flex;justify-content:space-between;align-items:center;font-family:var(--poster);font-size:7px;letter-spacing:.14em;color:rgba(185,180,168,.6);margin-top:7px;text-transform:uppercase;position:relative;z-index:1}
+  .p-stamp img{height:16px;width:auto;display:block;opacity:.85}
   .p-stamp .dot{color:var(--pink)}
   .p-title{font-family:var(--poster);font-size:clamp(26px,3.2vw,42px);line-height:1;text-transform:uppercase}
   .p-title .hot{color:var(--pink)}
@@ -408,7 +409,7 @@
         <div class="p-paper">
           <div class="p-cells" id="previewCells"></div>
           <img id="previewFrameImg" alt="" style="display:none">
-          <div class="p-stamp"><span>PIC A BOO</span><span class="dot">●</span><span>NO RETAKES</span></div>
+          <div class="p-stamp"><img src="assets/logo.png" alt="Pic A Boo"><span class="dot">●</span><span>NO RETAKES</span></div>
         </div>
       </div>
       <div class="controls">
