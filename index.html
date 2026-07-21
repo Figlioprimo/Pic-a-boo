@@ -334,7 +334,7 @@
         <button class="txtbtn" id="btnJoinView">Join your boo</button>
       </nav>
       <p class="s-tag">Smile. You don't get to pick which one they keep.</p>
-      <div class="s-foot"><span>PIC A BOO</span><span>2026</span></div>
+      <div class="s-foot"><span>PIC A BOO</span><span id="sFootYear">2026</span></div>
     </div>
     <div class="s-right" id="wall"></div>
   </div>
@@ -1341,7 +1341,7 @@ async function buildStrip(){
       // None: app draws its own logo top + year bottom
       try{ const lg=await load('assets/logo.png'); const lw=OUT_W*0.5, lh=lw*lg.height/lg.width; x.drawImage(lg,(OUT_W-lw)/2,20,lw,lh); lg.src=''; }catch(e){}
       x.fillStyle='#B9B4A8'; x.font='700 34px Anton, sans-serif'; x.textAlign='center';
-      x.fillText('A GAME FOR TWO · 2026', OUT_W/2, OUT_H-40);
+      x.fillText('A GAME FOR TWO · '+new Date().getFullYear(), OUT_W/2, OUT_H-40);
     }
 
     const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
@@ -1499,7 +1499,7 @@ async function stripScene(W,H){
     if (frameImg){ x.drawImage(frameImg,0,0,W,H); return; }
     if (logoImg){ const lw=W*0.5, lh=lw*logoImg.height/logoImg.width; x.drawImage(logoImg,(W-lw)/2,12*s,lw,lh); }
     x.fillStyle='#B9B4A8'; x.font=`700 ${17*s}px Anton, sans-serif`; x.textAlign='center';
-    x.fillText('A GAME FOR TWO · 2026', W/2, H-22*s);
+    x.fillText('A GAME FOR TWO · '+new Date().getFullYear(), W/2, H-22*s);
   }
   // full static, then each cell tunes in staggered, then hold
   function drawAt(t){
@@ -1678,6 +1678,7 @@ function setVH(){ document.documentElement.style.setProperty('--vh',(window.inne
 setVH(); window.addEventListener('resize',setVH); window.addEventListener('orientationchange',setVH);
 loadWall();
 discoverFrames();
+$('sFootYear').textContent=new Date().getFullYear();
 // unlock audio on first touch (mobile requires a gesture)
 window.addEventListener('touchstart',()=>{ try{ac();}catch(e){} },{once:true});
 window.addEventListener('click',()=>{ try{ac();}catch(e){} },{once:true});
