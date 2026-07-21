@@ -242,7 +242,7 @@
      controls beneath it and eats their taps, so drop it there */
   @media (max-width:820px){.previewwrap{position:static}}
   .plabel{font-family:var(--poster);font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--cream-dim);margin-bottom:12px}
-  .p-paper{background:#0B1729;padding:8px 8px 10px;width:74%;max-width:200px;border-radius:8px;border:1px solid rgba(79,227,255,.45);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.55),0 0 34px rgba(79,227,255,.14);position:relative}
+  .p-paper{background:#0B1729;padding:8px 8px 10px;width:94%;max-width:280px;border-radius:8px;border:1px solid rgba(79,227,255,.45);box-shadow:0 0 0 1px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.55),0 0 34px rgba(79,227,255,.14);position:relative}
   .p-cells{display:flex;flex-direction:column;gap:4px;position:relative;z-index:1}
   #previewFrameImg{position:absolute;inset:8px 8px 10px;width:calc(100% - 16px);height:calc(100% - 18px);object-fit:fill;pointer-events:none;z-index:2}
   .p-cell{width:100%;aspect-ratio:16/9;overflow:hidden;position:relative;background:#16294a;border-radius:1px}
@@ -252,6 +252,7 @@
   .p-cell .who{position:absolute;top:3px;left:4px;font-family:var(--poster);font-size:7.5px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.45)}
   .p-cell.shut .who{color:rgba(79,227,255,.5)}
   .p-stamp{display:flex;justify-content:space-between;align-items:center;font-family:var(--poster);font-size:7px;letter-spacing:.14em;color:rgba(185,180,168,.6);margin-top:7px;text-transform:uppercase;position:relative;z-index:1}
+  .p-stamp img{height:16px;width:auto;display:block;opacity:.85}
   .p-stamp .dot{color:var(--pink)}
   .p-title{font-family:var(--poster);font-size:clamp(26px,3.2vw,42px);line-height:1;text-transform:uppercase}
   .p-title .hot{color:var(--pink)}
@@ -333,7 +334,7 @@
         <button class="txtbtn" id="btnJoinView">Join your boo</button>
       </nav>
       <p class="s-tag">Smile. You don't get to pick which one they keep.</p>
-      <div class="s-foot"><span>PIC A BOO</span><span>2026</span></div>
+      <div class="s-foot"><span>PIC A BOO</span><span id="sFootYear">2026</span></div>
     </div>
     <div class="s-right" id="wall"></div>
   </div>
@@ -408,7 +409,7 @@
         <div class="p-paper">
           <div class="p-cells" id="previewCells"></div>
           <img id="previewFrameImg" alt="" style="display:none">
-          <div class="p-stamp"><span>PIC A BOO</span><span class="dot">●</span><span>NO RETAKES</span></div>
+          <div class="p-stamp"><img src="assets/logo.png" alt="Pic A Boo"><span class="dot">●</span><span>NO RETAKES</span></div>
         </div>
       </div>
       <div class="controls">
@@ -446,6 +447,7 @@
           <div class="r-paper">
             <div class="r-cells" id="revCells"></div>
             <div class="r-stamp"><span>PIC A BOO</span><span class="dot">●</span><span>NO RETAKES</span></div>
+            <img id="revFinalImg" alt="" style="display:none;width:100%;border-radius:2px">
           </div>
           <div class="curtain" id="curtain"></div>
         </div>
@@ -855,6 +857,7 @@ function booArrived(){
   if (!$('lobby').classList.contains('on')) return;
   const bc=$('booCam');
   bc.classList.remove('empty');
+  bc.innerHTML=''; // clear the "hasn't joined" placeholder now; the first snapshot/RTC frame fills it in
   if (!REDUCED){ bc.classList.remove('seatin'); void bc.offsetWidth; bc.classList.add('seatin'); confettiMini(bc); }
   arrivalUntil=Date.now()+2600;
   $('lobbyNote').textContent='Your boo is here. No backing out now.';
@@ -1241,6 +1244,22 @@ function paintRevealStatus(){
       ? (isHost ? '' : 'Both locked. Your boo hits BOO.')
       : 'Waiting for your boo to lock their picks…';
   }
+  if (built){ $('revStatus').textContent=''; showFinalStrip(); }
+}
+
+// once the framed strip is actually built, swap the raw cell preview for the
+// real finished (frame-included) picture instead of leaving the generic stamp up
+let finalShown=false;
+function showFinalStrip(){
+  if (!built || finalShown) return;
+  finalShown=true;
+  const img=$('revFinalImg');
+  img.onload=()=>{
+    $('revCells').style.display='none';
+    document.querySelector('#revResult .r-stamp').style.display='none';
+    img.style.display='block';
+  };
+  img.src=gridUrl()+'?v='+Date.now();
 }
 
 async function pressBoo(){
@@ -1322,7 +1341,7 @@ async function buildStrip(){
       // None: app draws its own logo top + year bottom
       try{ const lg=await load('assets/logo.png'); const lw=OUT_W*0.5, lh=lw*lg.height/lg.width; x.drawImage(lg,(OUT_W-lw)/2,20,lw,lh); lg.src=''; }catch(e){}
       x.fillStyle='#B9B4A8'; x.font='700 34px Anton, sans-serif'; x.textAlign='center';
-      x.fillText('A GAME FOR TWO · 2026', OUT_W/2, OUT_H-40);
+      x.fillText('A GAME FOR TWO · '+new Date().getFullYear(), OUT_W/2, OUT_H-40);
     }
 
     const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',.9));
@@ -1339,13 +1358,7 @@ async function buildStrip(){
 
 function load(src){ return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('load failed')); im.src=src; }); }
 
-// phones get the OS share sheet (straight to Stories etc.); everyone else gets a download
-async function saveOrShare(blob,name,mime){
-  const file=new File([blob],name,{type:mime});
-  if (navigator.canShare && navigator.canShare({files:[file]})){
-    try{ await navigator.share({files:[file]}); return; }
-    catch(e){ if (e && e.name==='AbortError') return; } // user closed the sheet; not an error
-  }
+async function saveBlob(blob,name,mime){
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
   URL.revokeObjectURL(a.href);
 }
@@ -1358,7 +1371,7 @@ async function download(){
     const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl+'?v='+Date.now();
     const blob=await (await fetch(url)).blob();
     const name=`pic-a-boo-${session.code}.jpg`;
-    await saveOrShare(blob,name,'image/jpeg');
+    await saveBlob(blob,name,'image/jpeg');
     await keep(blob,name);
   }catch(e){ fail('Could not save the photo. '+(e.message||e)); }
   finally{ btn.textContent=was; btn.disabled=false; }
@@ -1373,6 +1386,8 @@ function resetRound(){
   $('revResult').classList.remove('on'); $('revPre').style.display='flex';
   $('btnDl').hidden=true; $('btnVid').hidden=true; $('btnGif').hidden=true; $('revCap').textContent=''; $('revStatus').textContent='';
   $('btnBoo').disabled=false;
+  finalShown=false; $('revFinalImg').style.display='none'; $('revFinalImg').src='';
+  $('revCells').style.display=''; document.querySelector('#revResult .r-stamp').style.display='';
 }
 // Either person can hit "Again?". The HOST always drives the reshoot (like round 1).
 function rematch(){
@@ -1484,7 +1499,7 @@ async function stripScene(W,H){
     if (frameImg){ x.drawImage(frameImg,0,0,W,H); return; }
     if (logoImg){ const lw=W*0.5, lh=lw*logoImg.height/logoImg.width; x.drawImage(logoImg,(W-lw)/2,12*s,lw,lh); }
     x.fillStyle='#B9B4A8'; x.font=`700 ${17*s}px Anton, sans-serif`; x.textAlign='center';
-    x.fillText('A GAME FOR TWO · 2026', W/2, H-22*s);
+    x.fillText('A GAME FOR TWO · '+new Date().getFullYear(), W/2, H-22*s);
   }
   // full static, then each cell tunes in staggered, then hold
   function drawAt(t){
@@ -1530,7 +1545,7 @@ async function makeVideo(){
 
     const blob=new Blob(chunks,{type:type.mime});
     c.width=c.height=0;
-    await saveOrShare(blob,`pic-a-boo-${session.code}.${type.ext}`,type.mime);
+    await saveBlob(blob,`pic-a-boo-${session.code}.${type.ext}`,type.mime);
     if (type.ext!=='mp4') fail("Saved as .webm (your browser can't record mp4). Plays on phones and uploads to most apps.");
   }catch(e){ fail('Video failed. '+(e.message||e)+'. Use Photo instead.'); }
   finally{ $('btnVid').textContent='Video'; $('btnVid').disabled=false; }
@@ -1565,7 +1580,7 @@ async function makeGif(){
 
     const blob=new Blob([gif.bytes()],{type:'image/gif'});
     scene.canvas.width=scene.canvas.height=0;
-    await saveOrShare(blob,`pic-a-boo-${session.code}.gif`,'image/gif');
+    await saveBlob(blob,`pic-a-boo-${session.code}.gif`,'image/gif');
   }catch(e){ fail('GIF failed. '+(e.message||e)+'. Use Photo or Video instead.'); }
   finally{ $('btnGif').textContent='GIF'; $('btnGif').disabled=false; }
 }
@@ -1664,6 +1679,7 @@ setVH(); window.addEventListener('resize',setVH); window.addEventListener('orien
 if (window.visualViewport) window.visualViewport.addEventListener('resize',setVH);
 loadWall();
 discoverFrames();
+$('sFootYear').textContent=new Date().getFullYear();
 // unlock audio on first touch (mobile requires a gesture)
 window.addEventListener('touchstart',()=>{ try{ac();}catch(e){} },{once:true});
 window.addEventListener('click',()=>{ try{ac();}catch(e){} },{once:true});
