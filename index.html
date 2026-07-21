@@ -515,7 +515,20 @@ async function discoverFrames(){
     const src = `assets/frames/frame-${i}.png`;
     probes.push(new Promise(res=>{
       const im=new Image();
-      im.onload=()=>res({ id:'f'+i, label:'Frame '+i, src });
+      im.onload=()=>{
+        // bake a small thumbnail for the picker chip, so showing the chips
+        // never keeps full 1080x1920 decodes in memory (full src loads only
+        // when a frame is actually chosen)
+        let thumb=null;
+        try{
+          const c=document.createElement('canvas'); c.width=108; c.height=192;
+          const x=c.getContext('2d');
+          x.fillStyle='#0E1C33'; x.fillRect(0,0,108,192);
+          x.drawImage(im,0,0,108,192);
+          thumb=c.toDataURL('image/png');
+        }catch(e){}
+        res({ id:'f'+i, label:'Frame '+i, src, thumb });
+      };
       im.onerror=()=>res(null);
       im.src=src;
     }));
@@ -669,8 +682,15 @@ function startSnaps(){
 function stopSnaps(){ clearInterval(snapTimer); snapTimer=null; }
 function onSnap({payload}){
   if (payload.from===me || rtcOK) return;   // real video wins if present
-  const bc=$('booCam'); if(bc && bc.classList.contains('on')!==undefined){ bc.classList.remove('empty'); bc.innerHTML=`<img src="${payload.img}" style="width:100%;height:100%;object-fit:cover" alt="">`; }
-  const pb=$('pipBox'); if(pb) pb.innerHTML=`<img src="${payload.img}" style="width:100%;height:100%;object-fit:cover" alt="">`;
+  // reuse one img per container instead of rebuilding DOM every frame
+  const put=(box)=>{
+    if(!box) return;
+    let im=box.firstElementChild;
+    if(!im || im.tagName!=='IMG'){ box.innerHTML=''; im=document.createElement('img'); im.style.cssText='width:100%;height:100%;object-fit:cover'; box.appendChild(im); }
+    im.src=payload.img;
+  };
+  const bc=$('booCam'); if(bc){ bc.classList.remove('empty'); put(bc); }
+  put($('pipBox'));
 }
 
 
@@ -766,7 +786,7 @@ async function connect(code){
     .on('broadcast',{event:'rtc-ice'}, onRtcIce)
     .on('broadcast',{event:'shot'}, ({payload})=>{ if(payload.from!==me) onPartnerShotLanded(payload.i, payload.img); })
     .on('broadcast',{event:'countdown'}, ({payload})=>runShot(payload.shot))
-    .on('broadcast',{event:'finished'}, async ()=>{ await Promise.allSettled(uploads); openReview(); })
+    .on('broadcast',{event:'finished'}, async ()=>{ await Promise.allSettled(uploads); uploads=[]; openReview(); })
     .on('broadcast',{event:'picks'}, ({payload})=>{ if(payload.from===me)return; theirPick=payload.pick; paintPreview(); paintPickStatus(); paintReveal(); paintRevealStatus(); })
     .on('broadcast',{event:'locked'}, ({payload})=>{ if(payload.from===me)return; theirPick=payload.pick; theyLocked=true; paintPreview(); paintReveal(); paintRevealStatus(); maybeReadyPing(); })
     .on('broadcast',{event:'lockping'}, ({payload})=>{ if(payload.from===me)return; if(iLocked){ channel.send({type:'broadcast',event:'locked',payload:{from:me,pick:myPick}}); } })
@@ -882,6 +902,7 @@ async function startShoot(){
   }
   channel.send({type:'broadcast',event:'finished'});
   await Promise.allSettled(uploads);
+  uploads=[]; // the shot blobs are on the server now; let them go
   openReview();
 }
 
@@ -913,13 +934,15 @@ async function runShot(i){
 
 // broadcast a downscaled thumbnail of a shot to the other device
 async function sendShotThumb(blob, i){
+  const url=URL.createObjectURL(blob);
   try{
-    const im = await load(URL.createObjectURL(blob));
+    const im = await load(url);
     const c=document.createElement('canvas'); c.width=SNAP_W; c.height=SNAP_H;
     c.getContext('2d').drawImage(im,0,0,SNAP_W,SNAP_H);
     im.src='';
     channel.send({type:'broadcast',event:'shot',payload:{from:me,i,img:c.toDataURL('image/jpeg',.5)}});
   }catch(e){}
+  finally{ URL.revokeObjectURL(url); }
 }
 
 async function store(blob,i){
@@ -971,7 +994,7 @@ async function openReview(){
   }));
 
   // build frame chips (discovered from assets/frames/) as mini strip previews
-  $('frameChips').innerHTML = FRAMES.map(f=>`<span class="chip framechip ${f.id===chosenFrame?'on':''}" data-id="${f.id}" title="${f.label}">${f.src?`<img src="${f.src}" alt="${f.label}">`:`<span class="nofr">◹◸</span>`}</span>`).join('');
+  $('frameChips').innerHTML = FRAMES.map(f=>`<span class="chip framechip ${f.id===chosenFrame?'on':''}" data-id="${f.id}" title="${f.label}">${f.src?`<img src="${f.thumb||f.src}" alt="${f.label}">`:`<span class="nofr">◹◸</span>`}</span>`).join('');
   $('frameChips').querySelectorAll('.chip').forEach(c=>c.addEventListener('click',()=>{
     $('frameChips').querySelectorAll('.chip').forEach(x=>x.classList.remove('on'));
     c.classList.add('on'); chosenFrame=c.dataset.id;
@@ -1298,7 +1321,8 @@ async function reactionSnap(){
       const d=document.createElement('div');
       d.id='reactShot';
       d.style.cssText='position:absolute;bottom:-14px;right:-58px;width:120px;transform:rotate(6deg);background:#EFE9DD;padding:5px 5px 14px;border-radius:2px;box-shadow:0 10px 24px rgba(0,0,0,.5);z-index:8';
-      d.innerHTML=`<img src="${url}" style="width:100%;aspect-ratio:1;object-fit:cover;display:block"><div style="font-family:var(--body);font-size:8px;color:#8A8A8A;text-align:center;margin-top:3px">the moment you saw it</div>`;
+      d.innerHTML=`<img style="width:100%;aspect-ratio:1;object-fit:cover;display:block"><div style="font-family:var(--body);font-size:8px;color:#8A8A8A;text-align:center;margin-top:3px">the moment you saw it</div>`;
+      const ri=d.querySelector('img'); ri.onload=()=>URL.revokeObjectURL(url); ri.src=url;
       wrap.appendChild(d);
     }
     return blob;
@@ -1435,10 +1459,13 @@ async function makeGif(){
 
     const gif=GIFEncoder();
     const FPS=12, STEP=1000/FPS;
+    // one shared palette, built from the fully-revealed final frame (the most
+    // colorful moment) instead of re-quantizing every frame
+    scene.drawAt(STRIP_ANIM_MS);
+    const palette=quantize(x.getImageData(0,0,W,H).data,256);
     for (let t=0;t<=STRIP_ANIM_MS;t+=STEP){
       scene.drawAt(t);
       const {data}=x.getImageData(0,0,W,H);
-      const palette=quantize(data,256);
       gif.writeFrame(applyPalette(data,palette),W,H,{palette,delay:STEP});
       // let the UI breathe between frames
       await sleep(0);
@@ -1462,7 +1489,12 @@ async function loadWall(){
   wall.innerHTML='';
   const show=grids.slice(0,5);
   if (show.length){
-    show.forEach((g,i)=>{ const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`; el.innerHTML=`<img src="${URL.createObjectURL(g.blob)}" alt="">`; wall.appendChild(el); });
+    show.forEach((g,i)=>{
+      const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`;
+      const im=document.createElement('img'); const u=URL.createObjectURL(g.blob);
+      im.onload=()=>URL.revokeObjectURL(u); im.src=u; im.alt='';
+      el.appendChild(im); wall.appendChild(el);
+    });
   } else {
     for (let i=0;i<3;i++){ const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`; el.innerHTML=`<div class="empty">◹◸</div>`; wall.appendChild(el); }
   }
@@ -1477,12 +1509,19 @@ async function openGallery(){
   try{ const d=await db(); items=await new Promise((res,rej)=>{ const q=d.transaction('grids').objectStore('grids').getAll(); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); items.sort((a,b)=>b.at-a.at); }catch(e){ items=[]; }
   $('galleryEmpty').style.display = items.length ? 'none' : 'block';
   items.forEach(g=>{
-    const url=URL.createObjectURL(g.blob);
     const card=document.createElement('div');
     card.style.cssText='background:#0E1C33;border:1px solid rgba(79,227,255,.25);border-radius:8px;padding:8px;cursor:pointer';
     const dt=new Date(g.at).toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
-    card.innerHTML=`<img src="${url}" style="width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:4px;display:block"><div style="font-family:var(--body);font-size:11px;color:var(--cream-dim);margin-top:6px;text-align:center">${dt}</div>`;
-    card.addEventListener('click',()=>{ const a=document.createElement('a'); a.href=url; a.download=g.name||'pic-a-boo.jpg'; a.click(); });
+    const im=document.createElement('img');
+    im.style.cssText='width:100%;aspect-ratio:9/16;object-fit:cover;border-radius:4px;display:block';
+    const u=URL.createObjectURL(g.blob);
+    im.onload=()=>URL.revokeObjectURL(u); im.src=u;
+    const cap=document.createElement('div');
+    cap.style.cssText='font-family:var(--body);font-size:11px;color:var(--cream-dim);margin-top:6px;text-align:center';
+    cap.textContent=dt;
+    card.append(im,cap);
+    // mint a fresh URL per download so the display one can be revoked above
+    card.addEventListener('click',()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(g.blob); a.download=g.name||'pic-a-boo.jpg'; a.click(); URL.revokeObjectURL(a.href); });
     grid.appendChild(card);
   });
 }
