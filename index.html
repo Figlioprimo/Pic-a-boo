@@ -125,6 +125,17 @@
     7%,100%{transform:none}
   }
 
+  /* every screen change: the tube snaps on as a bright line and blooms open,
+     like switching a CRT on. temporary override of .stage's animation,
+     removed by JS once it finishes so stagewobble resumes. */
+  .stage.tvon{animation:crton .6s cubic-bezier(.2,.8,.3,1) both}
+  @keyframes crton{
+    0%,8%{transform:scaleY(.006) scaleX(1.06);filter:brightness(8) contrast(1.2);opacity:.85}
+    28%{transform:scaleY(.05) scaleX(1.02);filter:brightness(4)}
+    60%{transform:scaleY(1.015) scaleX(.998);filter:brightness(1.5)}
+    100%{transform:none;filter:none;opacity:1}
+  }
+
   .err{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:99;background:#7A1233;color:#fff;font-family:var(--body);font-size:13px;padding:12px 20px;border-radius:8px;max-width:90%;text-align:center;display:none}
   .err.on{display:block}
 
@@ -594,6 +605,8 @@ let chosenFilter='raw';
 function show(name){
   ['start','join','lobby','shoot','pick','reveal','gallery'].forEach(s => $(s).classList.toggle('on', s===name));
   const f=$('tvflick'); if(f){ f.classList.remove('run'); void f.offsetWidth; f.classList.add('run'); }
+  const stg=$(name).querySelector('.stage');
+  if (stg){ stg.classList.remove('tvon'); void stg.offsetWidth; stg.classList.add('tvon'); setTimeout(()=>stg.classList.remove('tvon'),650); }
   window.scrollTo(0,0);
 }
 function fail(msg){ $('err').textContent=msg; $('err').classList.add('on'); setTimeout(()=>$('err').classList.remove('on'),6000); }
