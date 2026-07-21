@@ -880,7 +880,13 @@ async function openReview(){
   $('shNum').textContent='Developing…'; $('shSmile').textContent='no peeking.';
   const { data,error } = await sb.from('photos').select().eq('session_id',session.id).order('created_at');
   if (error) return fail('Could not load the photos.');
-  pool = data.map(p=>({ ...p, url: sb.storage.from('photos').getPublicUrl(p.path).data.publicUrl }));
+  // rematch inserts fresh rows for the same storage paths: keep only the newest
+  // row per device+shot, and cache-bust the URL so round 2 doesn't show round 1
+  const newest = new Map();
+  for (const p of data) newest.set(p.device_id+'#'+p.shot_index, p);
+  pool = [...newest.values()]
+    .sort((a,b)=> a.shot_index-b.shot_index)
+    .map(p=>({ ...p, url: sb.storage.from('photos').getPublicUrl(p.path).data.publicUrl + '?v=' + encodeURIComponent(p.created_at||p.id) }));
   myPick=[]; theirPick=[]; iLocked=false; theyLocked=false; built=null; revealed=false;
 
   const theirs = pool.filter(p=>p.device_id!==me);
@@ -908,7 +914,7 @@ async function openReview(){
 
   buildPreviewCells();
   show('pick');
-  paintPreview(); paintPickStatus(); armTaunt();
+  paintMarks(); paintPreview(); paintPickStatus(); armTaunt();
 }
 
 
@@ -1163,7 +1169,8 @@ async function download(){
   if (!built) return;
   const btn=$('btnDl'); btn.disabled=true; const was=btn.textContent; btn.textContent='Fetching...';
   try{
-    const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl;
+    // the grid path is reused across rematches; bust the cache so round 2 saves round 2
+    const url=sb.storage.from('photos').getPublicUrl(built).data.publicUrl+'?v='+Date.now();
     const blob=await (await fetch(url)).blob();
     const name=`pic-a-boo-${session.code}.jpg`;
     await saveOrShare(blob,name,'image/jpeg');
