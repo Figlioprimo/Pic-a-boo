@@ -241,8 +241,12 @@
   @media (max-width:820px){.work{grid-template-columns:1fr}}
   @media (max-width:720px){
     #start .stage{flex-direction:column;gap:14px}
-    .s-right{flex:0 0 auto;flex-direction:row;gap:10px;flex-wrap:wrap;justify-content:center;max-height:34vh;overflow:hidden}
-    .polaroid{width:44%;margin-top:0!important}
+    /* .s-left/.s-right carry flex-basis percentages sized for the row layout
+       above; once the stage stacks into a column those percentages size
+       height instead of width and balloon the header, so reset both here. */
+    .s-left{flex:0 0 auto}
+    .s-right{flex:1 1 auto;flex-direction:row;gap:10px;flex-wrap:wrap;justify-content:center;align-content:flex-start;max-height:34vh;overflow-y:auto}
+    .polaroid{width:30%;margin-top:0!important}
     .s-logo{width:min(72%,320px);margin:8px auto 6px}
     .s-menu{align-items:center;text-align:center;margin:8px 0}
     .seats{grid-template-columns:1fr 1fr}
@@ -326,7 +330,11 @@
   #reactShot{animation:polapop .55s cubic-bezier(.2,1.5,.4,1)}
   @keyframes polapop{0%{transform:scale(0) rotate(30deg);opacity:0}100%{transform:rotate(6deg) scale(1);opacity:1}}
   .r-cap{font-family:var(--poster);font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);margin:20px 0 14px;min-height:20px}
-  .r-actions{display:flex;gap:26px;align-items:center;justify-content:center;flex-wrap:wrap}
+  .r-actions{display:flex;flex-direction:column;align-items:center;gap:14px}
+  .r-actions-row{display:flex;gap:26px;align-items:center;justify-content:center;flex-wrap:wrap}
+  /* "Again?"/"Start over" restart the whole session, unlike the save buttons
+     above; a divider keeps a stray tap from landing on the wrong kind of button */
+  .r-actions-next{padding-top:14px;border-top:1px solid rgba(239,233,221,.14)}
   .r-status{font-size:12px;color:var(--cream-dim);opacity:.75;margin-top:14px;min-height:18px}
   .waitmsg{opacity:.75}
 
@@ -464,11 +472,15 @@
         </div>
         <div class="r-cap" id="revCap"></div>
         <div class="r-actions">
-          <button class="txtbtn" id="btnDl" style="font-size:28px" hidden>Photo</button>
-          <button class="txtbtn" id="btnVid" style="font-size:28px" hidden>Video</button>
-          <button class="txtbtn" id="btnGif" style="font-size:28px" hidden>GIF</button>
-          <button class="txtbtn" id="btnRematch" style="font-size:22px">Again?</button>
-          <button class="txtbtn" id="btnAgain" style="font-size:16px;color:var(--cream-dim)">Start over</button>
+          <div class="r-actions-row">
+            <button class="txtbtn" id="btnDl" style="font-size:28px" hidden>Photo</button>
+            <button class="txtbtn" id="btnVid" style="font-size:28px" hidden>Video</button>
+            <button class="txtbtn" id="btnGif" style="font-size:28px" hidden>GIF</button>
+          </div>
+          <div class="r-actions-row r-actions-next">
+            <button class="txtbtn" id="btnRematch" style="font-size:22px">Again?</button>
+            <button class="txtbtn" id="btnAgain" style="font-size:16px;color:var(--cream-dim)">Start over</button>
+          </div>
         </div>
         <p class="r-status" id="revStatus"></p>
       </div>
@@ -1378,6 +1390,18 @@ async function buildStrip(){
 function load(src){ return new Promise((res,rej)=>{ const im=new Image(); im.crossOrigin='anonymous'; im.onload=()=>res(im); im.onerror=()=>rej(new Error('load failed')); im.src=src; }); }
 
 async function saveBlob(blob,name,mime){
+  // phones: hand the file to the OS share sheet so it can go straight to
+  // Instagram/Messages. <a download> is unreliable on mobile Safari (often
+  // just opens the image in a tab with no sign the tap did anything).
+  if (navigator.canShare){
+    try{
+      const file=new File([blob],name,{type:mime});
+      if (navigator.canShare({files:[file]})){
+        await navigator.share({files:[file]});
+        return;
+      }
+    }catch(e){ if (e.name==='AbortError') return; }
+  }
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; a.click();
   URL.revokeObjectURL(a.href);
 }
