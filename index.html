@@ -926,17 +926,20 @@ function onRoster(){
 }
 
 async function createRoom(){
-  if (!await camOn(createRoom)) return;
-  isHost=true;
-  const code=makeCode();
-  const { data,error } = await sb.from('sessions').insert({ code, host_device:me }).select().single();
-  if (error) return fail('Could not create the room. '+error.message);
-  session=data;
-  renderCode(code);
-  $('btnShareLink').hidden=false;
-  mountCam($('youCam'));
-  show('lobby');
-  await connect(code);
+  const btn=$('btnCreate'); btn.disabled=true; const was=btn.textContent; btn.textContent='Loading…';
+  try{
+    if (!await camOn(createRoom)) return;
+    isHost=true;
+    const code=makeCode();
+    const { data,error } = await sb.from('sessions').insert({ code, host_device:me }).select().single();
+    if (error) return fail('Could not create the room. '+error.message);
+    session=data;
+    renderCode(code);
+    $('btnShareLink').hidden=false;
+    mountCam($('youCam'));
+    show('lobby');
+    await connect(code);
+  } finally{ btn.textContent=was; btn.disabled=false; }
 }
 
 function roomLink(code){ return location.origin+location.pathname+'?room='+code; }
@@ -955,18 +958,21 @@ async function shareRoomLink(){
 async function joinRoom(){
   const code=$('joinCode').value.trim().toUpperCase();
   if (code.length!==4) return fail('That code is 4 letters.');
-  if (!await camOn(joinRoom)) return;
-  isHost=false;
-  const { data,error } = await sb.from('sessions').select().eq('code',code).single();
-  if (error||!data) return fail('No room with that code.');
-  session=data;
-  renderCode(code);
-  mountCam($('youCam'));
-  $('btnStart').style.display='none';
-  $('lobbyNote').textContent='You\'re in. They start when you\'re both ready.';
-  $('lobbySub').innerHTML='All set, lovebirds.';
-  show('lobby');
-  await connect(code);
+  const btn=$('btnJoin'); btn.disabled=true; const was=btn.textContent; btn.textContent='Loading…';
+  try{
+    if (!await camOn(joinRoom)) return;
+    isHost=false;
+    const { data,error } = await sb.from('sessions').select().eq('code',code).single();
+    if (error||!data) return fail('No room with that code.');
+    session=data;
+    renderCode(code);
+    mountCam($('youCam'));
+    $('btnStart').style.display='none';
+    $('lobbyNote').textContent='You\'re in. They start when you\'re both ready.';
+    $('lobbySub').innerHTML='All set, lovebirds.';
+    show('lobby');
+    await connect(code);
+  } finally{ btn.textContent=was; btn.disabled=false; }
 }
 
 function renderCode(code){ $('codeSlots').innerHTML=[...code].map(c=>`<div class="slot">${c}</div>`).join(''); }
