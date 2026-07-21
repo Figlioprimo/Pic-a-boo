@@ -147,8 +147,8 @@
   .s-item{display:flex;flex-direction:column;align-items:flex-start}
   .s-menu button{font-size:clamp(42px,6.6vw,90px);line-height:1.05;color:var(--cream)}
   /* one plain-language line under each CTA: what it does, not just what it's called */
-  .s-sub{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:500;font-size:clamp(12px,1.1vw,14px);color:var(--cream-dim);opacity:.7;margin-top:-2px}
-  .s-tag{font-weight:500;font-size:clamp(12px,1.2vw,14px);color:var(--cream-dim);opacity:.75;margin-top:18px;max-width:520px;line-height:1.5}
+  .s-sub{font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:500;font-size:clamp(12.5px,1.1vw,14.5px);color:var(--cream-dim);opacity:.85;margin-top:0}
+  .s-tag{font-weight:500;font-size:clamp(12px,1.2vw,14px);color:var(--cream-dim);opacity:.8;margin-top:18px;max-width:520px;line-height:1.5}
   .s-how{align-self:flex-start;text-align:left;font-family:var(--body);text-transform:none;letter-spacing:0;font-weight:600;font-size:clamp(12px,1.1vw,14px);color:var(--cyan);background:none;border:none;cursor:pointer;margin-top:10px;padding:0;text-decoration:underline;text-underline-offset:3px}
   .s-how:hover{color:var(--pink)}
   /* ============ HOW IT WORKS ============ */
@@ -158,12 +158,20 @@
   .how-close{font-family:var(--poster);font-size:clamp(24px,3vw,34px)}
   .s-foot{display:flex;justify-content:space-between;align-items:flex-end;margin-top:auto;padding-top:30px}
   .s-foot span{font-family:var(--poster);font-size:clamp(20px,2.4vw,30px);color:var(--pink);letter-spacing:.03em;text-shadow:0 0 22px rgba(226,74,155,.45)}
-  .s-right{flex:1 1 42%;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  .polaroid{background:var(--cream);padding:8px 8px 20px;border-radius:2px;box-shadow:0 12px 26px rgba(0,0,0,.35);width:min(64%,280px);margin-top:-26px;transition:transform .18s}
-  .polaroid:first-child{margin-top:0}
-  .polaroid:hover{transform:rotate(0)!important;scale:1.04;z-index:5}
-  .polaroid img{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:#0d1b30}
-  .polaroid .empty{width:100%;aspect-ratio:9/16;background:#dcd6c8;display:flex;align-items:center;justify-content:center;color:#b0a894;font-family:var(--poster);font-size:22px}
+  .s-right{flex:1 1 42%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;min-width:0;overflow:hidden;padding:8px 0}
+  /* the wall of past strips: a fanned pile of instant photos, one card tall and
+     bounded so it never runs off the top/bottom of the tube (it used to stack
+     vertically with negative margins and overflow the whole stage) */
+  .wall-fan{display:flex;justify-content:center;align-items:center;max-width:100%}
+  .polaroid{background:var(--cream);padding:7px 7px 15px;border-radius:2px;box-shadow:0 16px 32px rgba(0,0,0,.42);width:clamp(104px,14vw,158px);flex:0 0 auto;transition:transform .18s}
+  .polaroid:not(:first-child){margin-left:-40px}
+  .polaroid:hover{transform:rotate(0)!important;scale:1.07;z-index:5}
+  .polaroid img{display:block;width:100%;aspect-ratio:9/16;object-fit:cover;background:#0d1b30;border-radius:1px}
+  /* empty wall: cream instant-photo frames with an undeveloped (dark) window,
+     so a first-time visitor reads "nothing shot yet" instead of a broken image */
+  .polaroid .empty{width:100%;aspect-ratio:9/16;border-radius:1px;background:linear-gradient(155deg,#16294a 0%,#0c1930 100%);box-shadow:inset 0 0 26px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;color:#37527d;font-size:13px}
+  .wall-cap{font-family:var(--poster);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--cream-dim);opacity:.72;text-align:center}
+  #wall[data-filled="1"]{cursor:pointer}
 
   /* gallery: instant-film prints scattered on a desk, not a grid of cards */
   .gcard{background:#EFE9DD;border-radius:3px;padding:7px 7px 2px;cursor:pointer;box-shadow:0 10px 22px rgba(0,0,0,.45);transform:rotate(var(--tilt,0deg));transition:transform .15s}
@@ -251,8 +259,10 @@
   @media (max-width:820px){.work{grid-template-columns:1fr}}
   @media (max-width:720px){
     #start .stage{flex-direction:column;gap:14px}
-    .s-right{flex:0 0 auto;flex-direction:row;gap:10px;flex-wrap:wrap;justify-content:center;max-height:34vh;overflow:hidden}
-    .polaroid{width:44%;margin-top:0!important}
+    .s-left{flex:0 0 auto}
+    .s-right{flex:0 0 auto;gap:12px;padding:0}
+    .polaroid{width:clamp(88px,26vw,120px)}
+    .wall-cap{font-size:12px}
     .s-logo{width:min(72%,320px);margin:8px auto 6px}
     .s-menu{align-items:center;text-align:center;margin:8px 0}
     .s-item{align-items:center}
@@ -1645,19 +1655,27 @@ async function keep(blob,name){ try{ const d=await db(); d.transaction('grids','
 async function loadWall(){
   const wall=$('wall'); let grids=[];
   try{ const d=await db(); grids=await new Promise((res,rej)=>{ const q=d.transaction('grids').objectStore('grids').getAll(); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); grids.sort((a,b)=>b.at-a.at); }catch(e){ grids=[]; }
-  const tilts=[-6,4,-3,7,-5];
+  const tilts=[-7,5,-4,6,-5];
   wall.innerHTML='';
-  const show=grids.slice(0,5);
+  const fan=document.createElement('div'); fan.className='wall-fan';
+  const cap=document.createElement('p'); cap.className='wall-cap';
+  const show=grids.slice(0,4);
   if (show.length){
     show.forEach((g,i)=>{
       const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`;
       const im=document.createElement('img'); const u=URL.createObjectURL(g.blob);
       im.onload=()=>URL.revokeObjectURL(u); im.src=u; im.alt='';
-      el.appendChild(im); wall.appendChild(el);
+      el.appendChild(im); fan.appendChild(el);
     });
+    cap.textContent='Tap to see them all';
   } else {
-    for (let i=0;i<3;i++){ const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`; el.innerHTML=`<div class="empty">◹◸</div>`; wall.appendChild(el); }
+    for (let i=0;i<3;i++){ const el=document.createElement('div'); el.className='polaroid'; el.style.transform=`rotate(${tilts[i%5]}deg)`; el.innerHTML='<div class="empty">●</div>'; fan.appendChild(el); }
+    cap.textContent='Your strips end up here';
   }
+  wall.appendChild(fan); wall.appendChild(cap);
+  // only invite a tap once there's actually a gallery to open, so a first-timer
+  // doesn't land on an empty "no grids yet" screen
+  wall.dataset.filled = show.length ? '1' : '';
 }
 
 
@@ -1693,9 +1711,8 @@ $('btnJoin').addEventListener('click', joinRoom);
 $('btnHow').addEventListener('click', ()=>show('how'));
 $('btnHowBack').addEventListener('click', ()=>show('start'));
 $('btnStart').addEventListener('click', startShoot);
-$('wall').addEventListener('click', openGallery);
-$('wall').style.cursor='pointer';
-$('wall').title='See all your grids';
+$('wall').addEventListener('click', ()=>{ if ($('wall').dataset.filled) openGallery(); });
+$('wall').title='See all your strips';
 $('btnLock').addEventListener('click', lockPicks);
 $('btnBoo').addEventListener('click', pressBoo);
 $('btnDl').addEventListener('click', download);
